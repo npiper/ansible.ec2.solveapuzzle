@@ -38,6 +38,8 @@
       set_fact:
         vpc_id:           "{{ avpc.vpc.id }}"
 
+## PUBLIC - ZONING ##
+
 # Every VPC needs at least one Internet Gateway.
 # This component allows traffic between the VPC and the outside world.
 
@@ -53,7 +55,13 @@
         state:            "present"
       register: vpc_igw
 
-    - name: Create subnet for App Servers in 1a
+    - name: Set Internet Gateway ID in variable
+      set_fact:
+           igw_id: "{{ vpc_igw.gateway_id }}"
+
+## Public Facing Subnet
+
+    - name: Create Public subnet for App Servers in 1a
       ec2_vpc_subnet:
         vpc_id: "{{ vpc_id }}"
         region: "{{ aws_region }}"
@@ -64,17 +72,20 @@
           zone: public
           context: "{{ context }}"
         state: present
-      register: app_subnet-1a
+      register: public_subnet_1a
 
-    - name: Create subnet for App Servers in 1B
-      ec2_vpc_subnet:
-         vpc_id: "{{ vpc_id }}"
-         region: "{{ aws_region }}"
-         cidr: 10.0.1.0/28
-         az: "{{ aws_region }}b"
-         resource_tags:
-              Name: App Subnet 1B
-              zone: public
-              context: "{{ context }}"
-         state: present
-      register: app_subnet-1b
+    - name: Set Public Subnet ID in variable
+      set_fact:
+        public_subnet1a_id: "{{ public_subnet_1a.subnet.id }}"
+
+    - name: Set up public subnet route table
+      ec2_vpc_route_table:
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ aws_region }}"
+        tags:
+          Name: "Public Route Table"
+        subnets:
+          - "{{ public_subnet1a_id }}"
+        routes:
+          - dest: "0.0.0.0/0"
+            gateway_id: "{{ igw_id }}"
