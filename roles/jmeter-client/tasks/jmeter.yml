@@ -1,0 +1,222 @@
+---
+# This playbook contains common plays that will be run on all nodes.
+
+#- name: jmeter | Install jmeter
+#  apt: pkg={{ item }} state=present update_cache=yes
+#  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+#  with_items:
+#   - jmeter
+#   - jmeter-junit
+#   - jmeter-java
+
+- name: jmeter | Create temporary directory
+  shell: mktemp -d
+  register: tempdir
+  tags: jmeter_setup
+  changed_when: false
+
+#jmeter standard
+- name: jmeter | Download jmeter
+  get_url:
+    url="{{ jmeter_url }}"
+    dest="{{ jmeter_dir_tmp }}/"
+  register: jmeter_download
+  tags: jmeter_setup
+
+- name: jmeter | Create base directory for jmeter
+  file:
+    dest="{{ jmeter_base_dir }}"
+    state=directory
+#    owner="{{ jmeter_owner }}"
+#    group="{{ jmeter_group }}"
+  tags: jmeter_setup
+  become: yes
+
+- name: jmeter | Install unzip
+  action: "{{ ansible_pkg_mgr}} name=unzip state=present"
+  tags: jmeter_setup
+  become: yes
+
+- name: jmeter | Extract archive jmeter
+  unarchive:
+    src="{{ jmeter_dir_tmp }}/{{ jmeter_archive }}"
+    dest="{{ jmeter_base_dir }}"
+    creates="{{ jmeter_base_dir }}/{{ jmeter_name }}"
+    copy=no
+#    owner="{{ jmeter_owner }}"
+#    group="{{ jmeter_group }}"
+  tags: jmeter_setup
+  become: yes
+
+
+#- name: jmeter | Create home directory
+#  file:
+#    dest="{{ jmeter_home_dir }}"
+#    state=directory
+#    owner="{{jmeter_owner}}"
+#    group="{{jmeter_group}}"
+#  become : yes
+#  tags: jmeter_setup
+
+#jmeter plugins standard
+- name: jmeter | Download jmeter plugins standard
+  get_url:
+    url="{{ jmeter_plugins_standard_url }}"
+    dest="{{ jmeter_dir_tmp }}/"
+  register: jmeter_plugins_standard_download
+  when: jmeter_plugins_standard_enabled
+  tags: jmeter_setup
+
+- name: jmeter | Extract archive jmeter plugins standard
+  unarchive:
+    src="{{ jmeter_dir_tmp }}/{{ jmeter_plugins_standard_archive }}"
+    dest="{{ jmeter_base_dir }}/{{ jmeter_name }}"
+    copy=no
+#    owner="{{ jmeter_owner }}"
+#    group="{{ jmeter_group }}"
+  when: jmeter_plugins_standard_download.changed and jmeter_plugins_standard_enabled
+#  when: jmeter_plugins_standard_enabled
+  tags: jmeter_setup
+  become: yes
+
+#jmeter plugins extras
+- name: jmeter | Download jmeter plugins extras
+  get_url:
+    url="{{ jmeter_plugins_extras_url }}"
+    dest="{{ jmeter_dir_tmp }}/"
+  register: jmeter_plugins_extras_download
+  when: jmeter_plugins_extras_enabled
+  tags: jmeter_setup
+
+- name: jmeter | Extract archive jmeter plugins extras
+  unarchive:
+    src="{{ jmeter_dir_tmp }}/{{ jmeter_plugins_extras_archive }}"
+    dest="{{ jmeter_base_dir }}/{{ jmeter_name }}"
+    copy=no
+#    owner="{{ jmeter_owner }}"
+#    group="{{ jmeter_group }}"
+  when: jmeter_plugins_extras_download.changed and jmeter_plugins_extras_enabled
+#  when: jmeter_plugins_extras_enabled
+  tags: jmeter_setup
+  become: yes
+
+#jmeter plugins extraslibs
+- name: jmeter | Download jmeter plugins extraslibs
+  get_url:
+    url="{{ jmeter_plugins_extraslibs_url }}"
+    dest="{{ jmeter_dir_tmp }}/"
+  register: jmeter_plugins_extraslibs_download
+  when: jmeter_plugins_extraslibs_enabled
+  tags: jmeter_setup
+
+- name: jmeter | Extract archive jmeter plugins extraslibs
+  unarchive:
+    src="{{ jmeter_dir_tmp }}/{{ jmeter_plugins_extraslibs_archive }}"
+    dest="{{ jmeter_base_dir }}/{{ jmeter_name }}"
+    copy=no
+#    owner="{{ jmeter_owner }}"
+#    group="{{ jmeter_group }}"
+  when: jmeter_plugins_extraslibs_download.changed and jmeter_plugins_extraslibs_enabled
+#  when: jmeter_plugins_extraslibs_enabled
+  tags: jmeter_setup
+  become: yes
+
+#jmeter plugins webdriver
+- name: jmeter | Download jmeter plugins webdriver
+  get_url:
+    url="{{ jmeter_plugins_webdriver_url }}"
+    dest="{{ jmeter_dir_tmp }}/"
+  register: jmeter_plugins_webdriver_download
+  when: jmeter_plugins_webdriver_enabled
+  tags: jmeter_setup
+
+- name: jmeter | Extract archive jmeter plugins webdriver
+  unarchive:
+    src="{{ jmeter_dir_tmp }}/{{ jmeter_plugins_webdriver_archive }}"
+    dest="{{ jmeter_base_dir }}/{{ jmeter_name }}"
+    copy=no
+#    owner="{{ jmeter_owner }}"
+#    group="{{ jmeter_group }}"
+  when: jmeter_plugins_webdriver_download.changed and jmeter_plugins_webdriver_enabled
+#  when: jmeter_plugins_webdriver_enabled
+  tags: jmeter_setup
+  become: yes
+
+#jmeter plugins hadoop
+- name: jmeter | Download jmeter plugins hadoop
+  get_url:
+    url="{{ jmeter_plugins_hadoop_url }}"
+    dest="{{ jmeter_dir_tmp }}/"
+  register: jmeter_plugins_hadoop_download
+  when: jmeter_plugins_hadoop_enabled
+  tags: jmeter_setup
+
+- name: jmeter | Extract archive jmeter plugins hadoop
+  unarchive:
+    src="{{ jmeter_dir_tmp }}/{{ jmeter_plugins_hadoop_archive }}"
+    dest="{{ jmeter_base_dir }}/{{ jmeter_name }}"
+    copy=no
+#    owner="{{ jmeter_owner }}"
+#    group="{{ jmeter_group }}"
+  when: jmeter_plugins_hadoop_download.changed and jmeter_plugins_hadoop_enabled
+#  when: jmeter_plugins_hadoop_enabled
+  tags: jmeter_setup
+  become: yes
+
+#jmeter serveragent
+- name: jmeter | Create base directory for serveragent
+  file:
+    dest="{{jmeter_serveragent_base_dir}}"
+    state=directory
+#    owner="{{jmeter_owner}}"
+#    group="{{jmeter_group}}"
+  when: jmeter_serveragent_enabled
+  #  when: jmeter_download.changed
+  tags: jmeter_setup
+  become: yes
+
+- name: jmeter | Download jmeter serveragent
+  get_url:
+    url="{{ jmeter_serveragent_url }}"
+    dest="{{ jmeter_dir_tmp }}/"
+  register: jmeter_serveragent_download
+  when: jmeter_serveragent_enabled
+  tags: jmeter_setup
+
+- name: jmeter | Extract archive jmeter serveragent
+  unarchive:
+    src="{{ jmeter_dir_tmp }}/{{ jmeter_serveragent_archive }}"
+    dest="{{ jmeter_serveragent_base_dir }}"
+    copy=no
+#    owner="{{ jmeter_owner }}"
+#    group="{{ jmeter_group }}"
+  when: jmeter_serveragent_download.changed and jmeter_serveragent_enabled
+#  when: jmeter_serveragent_enabled
+  tags: jmeter_setup
+  become: yes
+
+# with 3.0, jmeter.properties is the default coming with the package and overrides should be
+# written to user.properties.
+#- name: jmeter | Configure jmeter
+#  template:
+#    src=jmeter.properties.j2
+#    dest="{{jmeter_configuration}}"
+#    backup=yes
+#    group="{{ jmeter_group }}"
+#    owner="{{ jmeter_owner }}"
+#  sudo: yes
+#  register: jmeter_configure
+
+#- name: jmeter | Ensure Jmeter restarted
+#  service: name=jmeter state=restarted
+#  when: jmeter_configure.changed
+
+- name: jmeter | Cleanup temporary directory
+  file: name={{ tempdir.stdout }} state=absent
+  tags: jmeter_setup
+  changed_when: false
+  ignore_errors: "{{ ansible_check_mode }}"
+  become: yes
+
+- debug: msg=" jmeter | Start jmeter agent {{jmeter_serveragent_base_dir}}/startAgent.sh"
+- debug: msg=" jmeter | Start jmeter {{jmeter_base_dir}}/{{ jmeter_name }}/bin/jmeter"

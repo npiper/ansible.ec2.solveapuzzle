@@ -1,0 +1,9 @@
+[all:vars]
+aws_region="eu-west-1"
+
+
+## For local testing
+localhost ansible_connection=local
+
+[localtest]
+localtest ansible_host=127.0.0.1 ansible_port=2222 ansible_user=vagrant ansible_private_key_file=./private_key

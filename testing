@@ -1,0 +1,21 @@
+[all:vars]
+aws_region="eu-west-1"
+context="testing"
+domain_name="dev.neilpiper.me"
+validate_certs="false"
+
+
+## Certbot role defaults
+certbot_create_certs=true
+certbot_mail_address=neiltpiper@gmail.com
+certbot_renew_certs=true
+
+## Security Hosts
+
+
+#[lets-encrypt]
+#lets-encrypt-url https://acme-staging.api.letsencrypt.org/directory
+
+## Staging flag
+## If you’re using Certbot,
+## you can use our staging environment with the --staging flag

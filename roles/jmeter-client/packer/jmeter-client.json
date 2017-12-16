@@ -1,0 +1,22 @@
+{
+    "builders": [{
+        "type": "amazon-ebs",
+        "region": "eu-west-1",
+        "vpc_id": "vpc-e3148487",
+        "subnet_id": "subnet-49378411",
+        "source_ami": "ami-01ccc867",
+        "instance_type": "t2.micro",
+        "ssh_username": "ec2-user",
+        "ami_name": "ami-JMeterTestServer"
+    }],
+    "provisioners": [{
+        "type": "shell",
+        "inline": [
+            "sleep 30",
+            "sudo yum update -y",
+            "sudo yum install -y -q git curl openjdk",
+            "echo \"Downloading JMeter 3.3\"",
+            "curl http://mirrors.ukfast.co.uk/sites/ftp.apache.org//jmeter/binaries/apache-jmeter-3.3.tgz"
+        ]
+    }]
+}

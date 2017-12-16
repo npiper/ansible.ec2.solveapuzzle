@@ -1,0 +1,80 @@
+---
+# AWS tasks are run 'locally'
+
+# Authentication details should be passed in as arguments or exported in the shell before running this playbook
+# Ideally they should be stored in Hashicorp's 'Vault'
+# e.g.
+# export AWS_ACCESS_KEY_ID='my-access-key123'
+# export AWS_SECRET_ACCESS_KEY='sekrit23418'
+#
+# Run with `ansible-playbook -i testing infra.yml`
+
+## Create a VPC - non default
+- name: CREATE AWS ENVIRONMENT
+  hosts: localhost
+  connection: local
+  gather_facts: False
+
+  tasks:
+    - name: Create VPC
+      ec2_vpc_net:
+       name: vpc-{{ domain_name }}
+       cidr_block: 10.0.0.0/16
+       region: "{{ aws_region }}"
+       dns_support: true
+       dns_hostnames: true
+       tags:
+         module: ansible ec2_vpc_net
+         domain_name: "{{ domain_name }}"
+         context: "{{ context }}"
+       tenancy: default
+       state: present
+      register: avpc
+
+      # We now use the set_fact module
+# to save the id of the VPC in a new variable.
+
+    - name:               Set VPC ID in variable
+      set_fact:
+        vpc_id:           "{{ avpc.vpc.id }}"
+
+# Every VPC needs at least one Internet Gateway.
+# This component allows traffic between the VPC and the outside world.
+
+    - name:               Create Internet Gateway for VPC
+      ec2_vpc_igw:
+        vpc_id:           "{{ vpc_id }}"
+        region:           "{{ aws_region }}"
+        tags:
+         Name: "{{ context }} Internet Gateway"
+         module: ansible ec2_vpc_igw
+         domain_name: "{{ domain_name }}"
+         context: "{{ context }}"
+        state:            "present"
+      register: vpc_igw
+
+    - name: Create subnet for App Servers in 1a
+      ec2_vpc_subnet:
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ aws_region }}"
+        cidr: 10.0.0.0/28
+        az: "{{ aws_region }}a"
+        resource_tags:
+          Name: App Subnet 1A
+          zone: public
+          context: "{{ context }}"
+        state: present
+      register: app_subnet-1a
+
+    - name: Create subnet for App Servers in 1B
+      ec2_vpc_subnet:
+         vpc_id: "{{ vpc_id }}"
+         region: "{{ aws_region }}"
+         cidr: 10.0.1.0/28
+         az: "{{ aws_region }}b"
+         resource_tags:
+              Name: App Subnet 1B
+              zone: public
+              context: "{{ context }}"
+         state: present
+      register: app_subnet-1b

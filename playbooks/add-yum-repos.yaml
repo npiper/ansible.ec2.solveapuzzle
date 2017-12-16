@@ -1,0 +1,15 @@
+- name: Add repository
+  hosts: testserver
+  become: True
+  tasks:
+    - yum:
+       name: epel-release
+       state: latest
+
+    - yum:
+       list: epel-release
+      register: result
+
+    - debug:
+       var: result
+       verbosity: 2

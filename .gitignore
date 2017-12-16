@@ -1,0 +1,8 @@
+# OS-specific
+.DS_Store
+
+# Ansible control files
+**.retry
+
+# Vagrant stuff
+**/.vagrant

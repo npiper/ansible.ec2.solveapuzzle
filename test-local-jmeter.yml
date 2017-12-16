@@ -1,0 +1,7 @@
+---
+ - name: Test local JMeter install
+   hosts: testserver
+   become: true
+
+   roles:
+     - jmeter-client

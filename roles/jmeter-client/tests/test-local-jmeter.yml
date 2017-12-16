@@ -1,0 +1,8 @@
+---
+- name: Test local JMeter installed
+  hosts: localhost
+  vars:
+
+
+roles:
+     - jmeter-client

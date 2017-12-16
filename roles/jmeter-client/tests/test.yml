@@ -1,0 +1,35 @@
+---
+- hosts: all
+
+  vars:
+    jmeter_version: 3.0
+    java_oracle_version: 8u66
+    java_oracle_distribution: jdk
+
+  pre_tasks:
+    - name: Ensure build dependencies are installed (RedHat).
+      yum: name=which state=present
+      when: ansible_os_family == 'RedHat'
+
+  roles:
+    - role_under_test
+
+#  vars:
+#      todo_enabled: no
+
+  tasks:
+    - name: Check jmeter
+      command: which /usr/local/jmeter/apache-jmeter-{{ jmeter_version }}/bin/jmeter
+      changed_when: false
+      register: jmeter_path
+
+    - debug:
+        msg: "Jmeter was installed in {{jmeter_path.stdout}}"
+
+    - fail:
+        msg: "Jmeter Not Found, tests failed."
+      when: jmeter_path.stdout != "/usr/local/jmeter/apache-jmeter-{{ jmeter_version }}/bin/jmeter"
+
+##Below need java
+#    - name: Display jmeter version
+#      command: /usr/local/jmeter/apache-jmeter-{{ jmeter_version }}/bin/jmeter --version
