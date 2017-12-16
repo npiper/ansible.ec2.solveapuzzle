@@ -71,6 +71,7 @@
           Name: App Subnet 1A
           zone: public
           context: "{{ context }}"
+          threat: high
         state: present
       register: public_subnet_1a
 
@@ -78,14 +79,53 @@
       set_fact:
         public_subnet1a_id: "{{ public_subnet_1a.subnet.id }}"
 
-    - name: Set up public subnet route table
+
+    - name: Set up public subnet route table for Internet Traffic
       ec2_vpc_route_table:
         vpc_id: "{{ vpc_id }}"
         region: "{{ aws_region }}"
+        purge_routes: true
+        purge_subnets: true
+        state: present
         tags:
           Name: "Public Route Table"
+          context: "{{ context }}"
+          zone: public
+          threat: high
         subnets:
           - "{{ public_subnet1a_id }}"
         routes:
           - dest: "0.0.0.0/0"
             gateway_id: "{{ igw_id }}"
+
+## DMZ - GATEWAY Servers
+
+    - name: Create new NAT gateway in AZ1a
+      ec2_vpc_nat_gateway:
+        state: present
+        region: "{{ aws_region }}"
+        subnet_id: "{{ public_subnet1a_id }}"
+        wait: yes
+        if_exist_do_not_create: true
+        wait: true
+      register: nat_gateway_1a
+
+    - name: Set AZ1a Nat Gateway ID in variable
+      set_fact:
+        nat_gateway_id: "{{ nat_gateway_1a.nat_gateway_id }}"
+
+### PRIVATE ZONE - Only comms to/from Internet via DMZ NAT Gateway or Egress
+
+    - name: Create Private subnet for Servers in 1a
+      ec2_vpc_subnet:
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ aws_region }}"
+        cidr: 10.0.1.0/28
+        az: "{{ aws_region }}a"
+        resource_tags:
+          Name: Private Subnet 1A
+          zone: private
+          context: "{{ context }}"
+          threat: medium
+        state: present
+      register: public_subnet_1a
