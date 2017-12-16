@@ -18,6 +18,9 @@ The default region is `eu-west-1` (Irleand).  This value can be overwritten in v
  * Ansible 2.4+
  * SSH
 
+## Diagram
+
+![Deploy](./inventory/DeploymentDiagram.svg)
 
 ## Order of Construction
 
