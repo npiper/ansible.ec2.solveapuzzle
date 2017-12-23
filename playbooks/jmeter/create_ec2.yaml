@@ -1,0 +1,72 @@
+---
+
+- sts_assume_role:
+    role_arn: "{{ jenkins_role_arn }}"
+    role_session_name: "ansibleSession"
+    region: "{{ aws_region }}"
+  register: assumed_role
+
+- name: Create ec2 for GW
+  ec2:
+    image: "{{ custom_ami_id }}"
+    aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+    aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+    security_token: "{{ assumed_role.sts_creds.session_token }}"
+    instance_type:  "{{ instance_type }}"
+    count: "{{ number_of_instances }}"
+    instance_initiated_shutdown_behavior: stop
+    #id: "{{ ec2_token }}"
+    #private_ip: "{{ ec2_ip }}"
+    group_id:
+      - "{{ ocp_sg_group_id }}"
+    instance_tags:
+      Name: "{{ master_tag }}-{{ cluster }}-{{ ec2_role }}"
+      Cluster: "{{ cluster }}"
+      Role: "{{ ec2_role }}"
+      jenkinsBuildTag: "{{ jenkins_build_tag }}"
+      NetworkTier: private
+      Service: ocp
+      ServiceComponent: "{{ ec2_role }}"
+    ec2_url: ec2."{{ aws_region}}".amazonaws.com
+    key_name: "{{ ec2_key_name }}"
+    region: "{{ aws_region }}"
+    tenancy: "{{ ec2_tenancy }}"
+    vpc_subnet_id: "{{ subnet_id }}"
+    wait: yes
+  register: custom_ec2
+
+- name: Add docker storage
+  ec2_vol:
+    device_name: /dev/xvdc
+    aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+    aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+    security_token: "{{ assumed_role.sts_creds.session_token }}"
+    encrypted: true
+    region: "{{ aws_region }}"
+    volume_type: "{{ xvdc_device_type }}"
+    delete_on_termination: true
+    instance: "{{ item.id }}"
+    kms_key_id: "{{ kms_ebs_key_id }}"
+    volume_size: "{{ xvdc_vol_size }}"
+    tags:
+      Name: "{{ master_tag }}-{{ cluster }}-{{ ec2_role }}"
+      Cluster: "{{ cluster }}"
+      Role: "{{ ec2_role }}"
+  with_items: "{{ custom_ec2.instances }}"
+  register: ec2_vol
+
+# - name: Wait for SSH to come up
+#   wait_for:
+#       host: "{{ item.private_dns_name }}"
+#       port: 22
+#       delay: 60
+#       timeout: 320
+#       state: started
+#   with_items: "{{ gw_ec2.instances }}"
+
+
+
+- include: ../../ec2_manage/add_tags.yaml
+  vars:
+    ec2_instances: "{{ custom_ec2.instances }}"
+    instance_role: "{{ ec2_role }}"

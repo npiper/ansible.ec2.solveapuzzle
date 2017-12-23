@@ -1,0 +1,11 @@
+---
+# The below are the default variables required to setup an ec2 for ldap
+instance_type: t2.micro
+
+# Amazon linux
+ami_type: ami-3ad9f75c
+
+number_of_instances: 1
+
+xvdc_device_type: standard
+xvdc_vol_size: 10

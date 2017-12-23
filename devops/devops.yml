@@ -1,0 +1,55 @@
+- name: CREATE DEVOPS ASSETS and ENVIRONMENT
+  hosts: localhost
+  connection: local
+  gather_facts: False
+
+  hosts: localhost
+  connection: local
+  gather_facts: False
+
+  tasks:
+
+## From - https://medium.com/@itsdavidthai/comprehensive-aws-ec2-deployment-with-travisci-guide-7cafa9c754fc
+### Storage resources for build assets
+    - name: Create Repository Storage bucket - Release path, in region
+      aws_s3:
+        bucket: repository
+        object: /
+        mode: create
+        region: {{ $aws_region }}
+
+    - name: Create Repository Storage bucket - Snapshot path, in region
+      aws_s3:
+         bucket: snapshot
+         object: /
+         mode: create
+         region: {{ $aws_region }}
+
+### Build Group
+
+
+### Add Policies to Groups
+
+### Build user - assign to Group
+     - name: Create a new IAM builduser with API keys
+       iam:
+         iam_type: user
+         name: "builduser"
+         state: present
+         password: "P3rs3ph0ne!"
+         access_key_state: create
+       register: builduser
+
+     - name:
+
+### CodeDeploy application
+
+
+
+### Policy for Server
+## Should have created 2 new S3 resources
+## arn:aws:s3:::snapshot
+## arn:aws:s3:::repository
+    - name: Create a write policy for a build user to the repository
+      iam_policy:
+         iam_type:

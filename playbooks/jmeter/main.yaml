@@ -1,0 +1,32 @@
+---
+
+- sts_assume_role:
+    role_arn: "{{ jenkins_role_arn }}"
+    role_session_name: "ansibleSession"
+    region: "{{ aws_region }}"
+  register: assumed_role
+
+- include: create_ec2.yaml
+  vars:
+    number_of_instances: "1"
+    #ec2_token: "{{ https_bank_az1_token }}"
+    ec2_role: "paperboy-ec2"
+    subnet_id: "{{ private_subnet_az1_id }}"
+    #ec2_ip: "{{ https_bank_az1_ip }}"
+
+- ec2_remote_facts:
+    region: "{{ aws_region }}"
+    aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+    aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+    security_token: "{{ assumed_role.sts_creds.session_token }}"
+    filters:
+      subnet-id: "{{ private_subnet_az1_id }}"
+      "tag:Name": "{{ master_tag }}-{{ cluster }}-paperboy-ec2"
+  register: ec2_az1_info
+
+- name: Set GW facts for AZ1
+  set_fact:
+    ec2_az1: "{{ ec2_az1_info }}"
+    ec2_az1_ip: "{{ ec2_az1_info.instances.0.private_ip_address }}"
+
+#-----------------------------------------------------------

@@ -38,6 +38,13 @@ Ansible galaxy - https://galaxy.ansible.com/
 
 https://valdhaus.co/books/taste-test-puppet-chef-salt-stack-ansible.html
 
+An approach to test anisble roles with Travis-ci:
+https://www.jeffgeerling.com/blog/testing-ansible-roles-travis-ci-github
+
+## References
+
+http://docs.ansible.com/ansible/latest/guide_aws.html#provisioning
+
 ## Structure
 
 ```
