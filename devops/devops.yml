@@ -3,10 +3,6 @@
   connection: local
   gather_facts: False
 
-  hosts: localhost
-  connection: local
-  gather_facts: False
-
   tasks:
 
 ## From - https://medium.com/@itsdavidthai/comprehensive-aws-ec2-deployment-with-travisci-guide-7cafa9c754fc
@@ -26,9 +22,44 @@
          region: {{ $aws_region }}
 
 ### Build Group
+    - iam_group:
+        name: buildusers
+        state: present
 
 
-### Add Policies to Groups
+### Add Policies to builduser group
+    - name: Assign a policy for artifact deploys to the buildusers group
+      iam_policy:
+        iam_type: group
+        iam_name: buildusers
+        policy_name: build-deployment
+        state: present
+        policy_document: files/buildrole-deploy-artifact.json
+
+    - name: Assign a policy for pushing built artifacts to repos for the buildusers group
+      iam_policy:
+        iam_type: group
+        iam_name: buildusers
+        policy_name: build-push-to-repo
+        state: present
+        policy_document: files/buildrole-push-to-repo.json
+
+### Create an EC2 role with policy to access Repo assets
+
+     - name: Create EC2 Role for retrieving archives
+       iam:
+         iam_type: role
+         name: ec2-readrepo-role
+         state: present
+
+     - name: Assign policy for retrieving repo assets to EC2 role
+       iam_policy:
+         iam_type: role
+         iam_name: ec2-readrepo-role
+         policy_name: ec2-getrepodata-policy
+         policy_document: files/ec2-getrepodata-policy.json
+         state: present
+
 
 ### Build user - assign to Group
      - name: Create a new IAM builduser with API keys
@@ -40,8 +71,6 @@
          access_key_state: create
        register: builduser
 
-     - name:
-
 ### CodeDeploy application
 
 
@@ -50,6 +79,3 @@
 ## Should have created 2 new S3 resources
 ## arn:aws:s3:::snapshot
 ## arn:aws:s3:::repository
-    - name: Create a write policy for a build user to the repository
-      iam_policy:
-         iam_type:
