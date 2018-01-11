@@ -9,32 +9,36 @@
 ### Storage resources for build assets
     - name: Create Repository Storage bucket - Release path, in region
       aws_s3:
-        bucket: repository
-        object: /
+        bucket: "{{ domain_name }}.repository"
         mode: create
-        region: {{ $aws_region }}
+        region: "{{ aws_region }}"
 
     - name: Create Repository Storage bucket - Snapshot path, in region
       aws_s3:
-         bucket: snapshot
-         object: /
+         bucket: "{{ domain_name }}.snapshot"
          mode: create
-         region: {{ $aws_region }}
+         region: "{{ aws_region }}"
+
+#    - name: Create buildusers group
+#      iam_group:
+#        name: buildusers
+#        state: present
 
 ### Build Group
-    - iam_group:
-        name: buildusers
-        state: present
+  ##  - name: Create buildusers group
+  ##    iam_group:
+  ##      name: buildusers
+  ##      state: present
 
 
 ### Add Policies to builduser group
-    - name: Assign a policy for artifact deploys to the buildusers group
-      iam_policy:
-        iam_type: group
-        iam_name: buildusers
-        policy_name: build-deployment
-        state: present
-        policy_document: files/buildrole-deploy-artifact.json
+#    - name: Assign a policy for artifact deploys to the buildusers group
+#      iam_policy:
+#        iam_type: group
+#        iam_name: buildusers
+#        policy_name: build-deployment
+#        state: present
+#        policy_document: files/buildrole-deploy-artifact.json
 
     - name: Assign a policy for pushing built artifacts to repos for the buildusers group
       iam_policy:
@@ -44,16 +48,16 @@
         state: present
         policy_document: files/buildrole-push-to-repo.json
 
-### Create an EC2 role with policy to access Repo assets
+### Create an EC2 role with policy to access Repo asset
 
-     - name: Create EC2 Role for retrieving archives
-       iam:
-         iam_type: role
-         name: ec2-readrepo-role
-         state: present
+    - name: Create EC2 Role for retrieving archives
+      iam:
+        iam_type: role
+        name: ec2-readrepo-role
+        state: present
 
-     - name: Assign policy for retrieving repo assets to EC2 role
-       iam_policy:
+    - name: Assign policy for retrieving repo assets to EC2 role
+      iam_policy:
          iam_type: role
          iam_name: ec2-readrepo-role
          policy_name: ec2-getrepodata-policy
@@ -62,14 +66,15 @@
 
 
 ### Build user - assign to Group
-     - name: Create a new IAM builduser with API keys
-       iam:
+    - name: Create a new IAM builduser with API keys
+      iam:
          iam_type: user
          name: "builduser"
          state: present
          password: "P3rs3ph0ne!"
          access_key_state: create
-       register: builduser
+         groups: buildusers
+      register: builduser
 
 ### CodeDeploy application
 

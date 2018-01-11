@@ -7,8 +7,8 @@
                 "s3:PutObject"
             ],
             "Resource": [
-                "arn:aws:s3:::snapshot",
-                "arn:aws:s3:::repository"
+                "arn:aws:s3:::dev.neilpiper.me.snapshot",
+                "arn:aws:s3:::dev.neilpiper.me.repository"
             ]
         }
     ]

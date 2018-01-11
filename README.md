@@ -29,7 +29,11 @@ Set environment variables
 Write scripts (any language)
 ```
 
+## Build server
 
+AWS with travis-ci
+
+https://medium.com/@itsdavidthai/comprehensive-aws-ec2-deployment-with-travisci-guide-7cafa9c754fc
 
 
 ## Where to get re-usable roles

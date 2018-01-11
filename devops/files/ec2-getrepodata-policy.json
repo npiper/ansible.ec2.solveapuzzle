@@ -2,15 +2,15 @@
     "Version": "2012-10-17",
     "Statement": [
         {
-            "Sid": "ec2-get-repoassets",
+            "Sid": "ec2getrepoassets",
             "Effect": "Allow",
             "Action": [
                 "s3:Get*",
                 "s3:List*"
             ],
             "Resource": [
-                "arn:aws:s3:::snapshot",
-                "arn:aws:s3:::repository"
+                "arn:aws:s3:::dev.neilpiper.me.snapshot",
+                "arn:aws:s3:::dev.neilpiper.me.repository"
             ]
         }
     ]
