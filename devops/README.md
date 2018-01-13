@@ -4,7 +4,13 @@ Goal - create a pipeline for TravisCI to AWS assets
 
 Create Required buildusers, keys, access and pipeline assets.
 
+
+# Deployment overview
+
+![Deploy diagram](devops.svg)
+
 ## Artifacts created
+
 
 ### Storage buckets for Artifacts
 
@@ -18,6 +24,7 @@ Create a `buildusers` group.
 Current issue:  The 'buildusers' group must be manually created as the ansible iam
 command does not currently execute.  (Times out)
 ```
+
 This Group will give it's members access to write and promote assets to the 2 s3 Buckets created. (Inline policies)
 
 ### roles
