@@ -55,6 +55,21 @@
         iam_type: role
         name: ec2-readrepo-role
         state: present
+      register: ec2role
+
+    - name: record aws account_id from role arn
+      set_fact:
+        account_id: "{{ ec2role.instance_profile_result.arn | regex_search('([0-9]{12})') }}"
+
+    - name: Substitute region and account_id in policy file
+      template:
+         src: files/buildrole-deploy-artifact.json
+         dest: files/buildrole-deploy-artifact2.json
+
+         #regexp: '##aws_region##?$'
+         #replace: '\1{{ aws_region }}'
+         #backup: yes
+
 
     - name: Assign policy for retrieving repo assets to EC2 role
       iam_policy:

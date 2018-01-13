@@ -8,7 +8,7 @@
                 "codedeploy:GetApplicationRevision"
             ],
             "Resource": [
-                "arn:aws:codedeploy:ServerRegionHERE:AccIdHERE:application:NameOfTheCodeDeployApplicationNameHERE"
+                "arn:aws:codedeploy:{{ aws_region }}:{{ account_id }}:application:NameOfTheCodeDeployApplicationNameHERE"
             ]
         },
         {
@@ -27,9 +27,9 @@
                 "codedeploy:GetDeploymentConfig"
             ],
             "Resource": [
-                "arn:aws:codedeploy:ServerRegionHERE:AccIdHERE:deploymentconfig:CodeDeployDefault.OneAtATime",
-                "arn:aws:codedeploy:ServerRegionHERE:AccIdHERE:deploymentconfig:CodeDeployDefault.HalfAtATime",
-                "arn:aws:codedeploy:ServerRegionHERE:AccIdHERE:deploymentconfig:CodeDeployDefault.AllAtOnce"
+                "arn:aws:codedeploy:{{ aws_region }}:{{ account_id }}:deploymentconfig:CodeDeployDefault.OneAtATime",
+                "arn:aws:codedeploy:{{ aws_region }}:{{ account_id }}:deploymentconfig:CodeDeployDefault.HalfAtATime",
+                "arn:aws:codedeploy:{{ aws_region }}:{{ account_id }}:deploymentconfig:CodeDeployDefault.AllAtOnce"
             ]
         }
     ]
