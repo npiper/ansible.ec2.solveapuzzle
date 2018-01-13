@@ -1,4 +1,9 @@
+# DevOps Domain ansible
 
+
+## Deployment overview
+
+![Deploy diagram](devops.svg)
 
 ## To start
 ```
