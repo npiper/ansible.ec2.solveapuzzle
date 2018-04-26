@@ -1,0 +1,19 @@
+---
+- name: Create DNS Area and routing
+  hosts: localhost
+  connection: local
+  gather_facts: False
+
+  tasks:
+
+   - name: List all hosted zones
+     route53_facts:
+       query: hosted_zone
+     register: hosted_zones
+
+   - name: List the first 20 resource record sets in a given hosted zone
+     route53_facts:
+       query: record_sets
+       hosted_zone_id: "{{ hosted_zones.[0].id }}"
+       max_items: 20
+     register: record_sets

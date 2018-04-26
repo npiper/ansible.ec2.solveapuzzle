@@ -1,0 +1,6 @@
+---
+# Create a VPN for the domain
+-  name: Create VPN Gateway
+
+# A virtual private gateway (VPG) is the virtual private network (VPN)
+#concentrator on the AWS side of the VPN connection between the two networks

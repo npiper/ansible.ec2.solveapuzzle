@@ -1,0 +1,24 @@
+---
+# Create the domains internet and DMZ areas
+- name: Create internet routing and dmz
+
+
+## Web application firewall
+
+## Internet Gateway
+
+## Load balancers
+
+## Identity managers
+
+# An IGW provides a target in your Amazon VPC route tables for Internet-routable traffic,
+# and it performs network address translation for instances that have been assigned public IP addresses.
+
+
+## Making a Subnet publicly accessible
+
+### An IGW
+### Public subnet, route table to send all non VPC traffic to the IGW
+### NACLs , Security Groups to flow to / from instances
+### EC2 instance - linked to a public IP or EIP address
+### (Route 53, domain name?)

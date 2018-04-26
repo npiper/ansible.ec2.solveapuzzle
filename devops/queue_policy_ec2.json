@@ -1,0 +1,30 @@
+{
+   "Version": "2012-10-17",
+   "Id": "ec2-sqs",
+   "Statement" : [{
+      "Sid": "1",
+      "Effect": "Allow",
+      "Action": [
+                      "sqs:DeleteMessage",
+                      "sqs:GetQueueUrl",
+                      "sqs:ListQueues",
+                      "sqs:ChangeMessageVisibility",
+                      "sqs:SendMessageBatch",
+                      "sqs:UntagQueue",
+                      "sqs:ReceiveMessage",
+                      "sqs:SendMessage",
+                      "sqs:GetQueueAttributes",
+                      "sqs:ListQueueTags",
+                      "sqs:TagQueue",
+                      "sqs:ListDeadLetterSourceQueues",
+                      "sqs:DeleteMessageBatch",
+                      "sqs:PurgeQueue",
+                      "sqs:DeleteQueue",
+                      "sqs:CreateQueue",
+                      "sqs:ChangeMessageVisibilityBatch",
+                      "sqs:SetQueueAttributes"
+                  ],
+      "Resource": ["arn:aws:sqs:*:350039378725:*"
+      ]
+   }]
+}
