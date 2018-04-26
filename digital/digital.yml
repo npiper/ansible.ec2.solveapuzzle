@@ -1,0 +1,46 @@
+---
+- name:  Create Digital environment
+  hosts: localhost
+  connection: local
+  gather_facts: False
+
+  tasks:
+    - name: Substitute domain in public bucket policy file
+      template:
+         src: files/bucket-policy.json
+         dest: files/bucket-policy.tmp
+
+    - name: Create Storage bucket for Static website
+      s3_bucket:
+        name: "{{ domain_name }}"
+        state: present
+        region: "{{ aws_region }}"
+        policy: "{{ lookup('file','files/bucket-policy.tmp') }}"
+
+
+    - name: Create a Storage bucket for a static website
+      s3_website:
+        name: "{{ domain_name }}"
+        region: "{{ aws_region }}"
+        suffix: index.html
+        error_key: errors/404.html
+        state: present
+
+    - name: Copy index file to the bucket
+      s3:
+       bucket: "{{ domain_name }}"
+       object: index.html
+       src: files/index.html
+       mode: put
+
+    - name: Copy error file to the bucket
+      s3:
+       bucket: "{{ domain_name }}"
+       object: errors/404.html
+       src: files/404.html
+       mode: put
+
+
+    #- name: Create Route53 record set value
+      # s3-website.us-east-2.amazonaws.com
+      # s3-website."{{ aws_region }}".amazonaws.com

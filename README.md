@@ -27,6 +27,23 @@ Use the sudo command
 
 Check and set file permissions
 
+## Deploying via Travis-CI
+
+### Pre-Requisites
+
+Encrypt your AWS Access keys in the travis-ci deployment
+
+### References
+
+https://github.com/ansistrano/deploy/blob/master/.travis.yml
+
+https://blog.travis-ci.com/2017-11-30-testing-ansible-roles-using-docker-on-travis
+
+http://dev.solita.fi/2017/04/12/easy-test-deployments.html 
+
+
+
+
 Start and stop services
 
 Set environment variables
