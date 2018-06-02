@@ -29,6 +29,8 @@ Check and set file permissions
 
 ## Deploying via Travis-CI
 
+https://blog.travis-ci.com/2017-11-30-testing-ansible-roles-using-docker-on-travis
+
 ### Pre-Requisites
 
 Encrypt your AWS Access keys in the travis-ci deployment
