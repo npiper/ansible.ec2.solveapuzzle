@@ -15,3 +15,4 @@ install:
 
 script:
   # We'll add some commands to test the role here.
+  - ansible-playbook -i testing infra/infra.yml --syntax-check
