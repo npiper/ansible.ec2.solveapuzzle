@@ -1,26 +1,21 @@
----
 sudo: required
 dist: trusty
-
 language: python
-python: "2.7"
-
-# Doc: https://docs.travis-ci.com/user/customizing-the-build#Build-Matrix
+python: '2.7'
 env:
+  matrix:
   - ANSIBLE_VERSION=latest
-
+  global:
+  - secure: huJk1AiPjWMhM5Rxt5bowSeyrNGgOrOIr67b5xLuHEj6gWJMhtS3ZGxupEUNwKbKA9IJFjkGLMhSZREIb46k19HjYN+AazFORQOVoogf7JkcW/6wIr32F4L0cLqZ6g6gNhrBe5z+tnznAJR7PM4jwpmUQIelmddHsXLv/8vpwBUIva5UIcdhTM4Sqv1b33ErPgwknAwe56CWq/P2yAPORCnhyHxsKoDpFbjpgs9CB5Z6RtsiQk4kj345qxZp7p4M2uEazmr+fZ+oeTTfW1h5QCfZUP1y2AMhCwPa/syhrEHTNTd3OuDskiU6PHp5ub5VMg1eXDqbh+MzK9TRHVbLtegOBT/+/nUxIGfJD7+//+xx0tbTSXNbTcRUkKLLdy+0zq/CVoMh9182Q0dTCLB020q5QcZmpeGUTzb3snMB1YCKTpTwxnqO4CfZygrZGICJ5kMlIhRbjlJb7KnEW8czXRQpjn2k8Pp43kXhoPRZBcEmFfL3urMmWaaENX50XklbKS0BCBYVosXp7ICHocVTbegKyoXDlbwLXY3KHKkFkJAep4nVu61b30qjZgbn2rFZekXi1NfjimtP6puduRNVVzC2+3C6Ht3XuB2PwJMTZihXYgJFedaUuZ3bGCaccj68BTtIwKWFz5bI+9zvTMeDFFD7akajQ3q7dt0atsfrolw=
+  - secure: TR0iNf3atYqcxhK7QmsnCC1hjFSfxo3ErrkW7XD6BO9cmgUH08ZFB6berY5NbIicoP6Le8KIS+CFNH95L7HWyjZc2UN4kv9i0wEiDOkbxGw994qD5uT7P3OfPk5LdbuWGDYkYtP1lGiGoV3dEMyIgDpquSn/ca3HvjAazhF8fMLqrx63yhp9mgZ64mpmy/fFcJ3AlSHHsOK/Z/P3tVnxHi3usXXJrvpE+mjZeOd21ORHaXT9wT5eecCaGlSqOI8xvRGhv1nU1Ot8tWC8IgdCAUdBgtfUnL3QQoeT4AorSH4bsi7PVOdQCM1kX3AninK6Io0xTIbC1KnpNNGbLWNjIyZXrVxLpiZCEoR3/QvJ5hdRyMaw8fKckA2GiJSsupEbPzASyS1FYxQnn49SxQnqJT1WFOSPno+xO2UaJnB9K2NheMzbw6duHNpu5ek6+p3vP69JLqcDyXYfAqxArr+PdutobutgUJulQEzVPRo8sz+0m63WcX7i4zoM6Td/8gvlQ39oSz/1Z/yqLSANw/YRUDtv4bgXntNrsmnzriFepuMgwJ1bVw/YfUKQqwBea3e9v1pAphx8HoWkpd9omlsx/yd69n35rVwg9EOIZYLm87mvCOroMGbSxit0Syh6YYg30DyDf3rLHlVaLfCdfNR91CYUeFkCsPlTHvUHZSbp7Us=
 branches:
   only:
-    - master
-
+  - master
 before_install:
-  - sudo apt-get update -qq
-
+- sudo apt-get update -qq
 install:
-  # Install Ansible.
-  - if [ "$ANSIBLE_VERSION" = "latest" ]; then pip install ansible; else pip install ansible==$ANSIBLE_VERSION; fi
-  - if [ "$ANSIBLE_VERSION" = "latest" ]; then pip install ansible-lint; fi
-
+- if [ "$ANSIBLE_VERSION" = "latest" ]; then pip install ansible; else pip install
+  ansible==$ANSIBLE_VERSION; fi
+- if [ "$ANSIBLE_VERSION" = "latest" ]; then pip install ansible-lint; fi
 script:
-  # Check the role/playbook's syntax. 
-  - ansible-playbook -i testing infra/infra.yml --syntax-check
+- ansible-playbook -i testing infra/infra.yml --syntax-check
