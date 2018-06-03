@@ -1,18 +1,26 @@
 ---
+sudo: required
+dist: trusty
+
 language: python
 python: "2.7"
 
+# Doc: https://docs.travis-ci.com/user/customizing-the-build#Build-Matrix
+env:
+  - ANSIBLE_VERSION=latest
+
+branches:
+  only:
+    - master
+
 before_install:
-  # Make sure everything's up to date.
   - sudo apt-get update -qq
 
 install:
   # Install Ansible.
-  - pip install ansible
-
-  # Add ansible.cfg to pick up roles path.
-  - "printf '[defaults]\ninventory = ./inventory/hosts' > ansible.cfg"
+  - if [ "$ANSIBLE_VERSION" = "latest" ]; then pip install ansible; else pip install ansible==$ANSIBLE_VERSION; fi
+  - if [ "$ANSIBLE_VERSION" = "latest" ]; then pip install ansible-lint; fi
 
 script:
-  # We'll add some commands to test the role here.
+  # Check the role/playbook's syntax. 
   - ansible-playbook -i testing infra/infra.yml --syntax-check
