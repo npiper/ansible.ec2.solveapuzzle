@@ -46,20 +46,20 @@ The default region is `eu-west-1` (Irleand).  This value can be overwritten in v
 
 Perform a syntax check on the playbook, but do not execute it
 ```
-ansible-playbook --syntax-check -i testing infra.yml
+ansible-playbook --syntax-check -i ../testing infra.yml
 ```
 
 ### Dry run
 don't make any changes; instead, try to predict some of the changes that may occur
 
 ```
-ansible-playbook --check -i testing infra.yml
+ansible-playbook --check -i ../testing infra.yml
 ```
 
 
 ### Run in verbose Mode
 ```
-ansible-playbook -vvv -i testing infra.yml
+ansible-playbook -vvv -i ../testing infra.yml
 ```
 
 ## References

@@ -3,29 +3,27 @@
 
 ## Deployment overview
 
-![Deploy diagram](devops.svg)
+![Deploy diagram](devops/devops.svg)
 
-## To start
-```
-ansible-playbook webservers.yml
-```
+### Initial VPC and Networking
+
+[Infrastructure Instructions](infra/README.md)
+
+### Devops
+
+[DevOps instructions](devops/README.md)
+
+##
+
 
 ## Vagrant
 
 ssh vagrant@127.0.0.1 -p 2222 -i $(pwd)/playbooks/.vagrant/machines/default/virtualbox/private_key
 
-## Skills required
+## Pre-Requisites
 
-```
-Connect to a remote machine using SSH
-
-Interact with the Bash command-line shell (pipes and redirection)
-
-Install packages
-
-Use the sudo command
-
-Check and set file permissions
+ * AWS Account and access keys for API's
+ * [Ansible installed](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html#intro-installation-guide)
 
 ## Deploying via Travis-CI
 
@@ -43,17 +41,8 @@ https://github.com/ansistrano/deploy/blob/master/.travis.yml
 
 https://blog.travis-ci.com/2017-11-30-testing-ansible-roles-using-docker-on-travis
 
-http://dev.solita.fi/2017/04/12/easy-test-deployments.html 
+http://dev.solita.fi/2017/04/12/easy-test-deployments.html
 
-
-
-
-Start and stop services
-
-Set environment variables
-
-Write scripts (any language)
-```
 
 ## Build server
 
@@ -70,10 +59,6 @@ https://valdhaus.co/books/taste-test-puppet-chef-salt-stack-ansible.html
 
 An approach to test anisble roles with Travis-ci:
 https://www.jeffgeerling.com/blog/testing-ansible-roles-travis-ci-github
-
-## References
-
-http://docs.ansible.com/ansible/latest/guide_aws.html#provisioning
 
 ## Structure
 
@@ -121,3 +106,11 @@ roles/
     monitoring/           # ""
     fooapp/               # ""
   ```
+
+## References
+
+http://docs.ansible.com/ansible/latest/guide_aws.html#provisioning
+
+[Ansible external inventory for AWS](https://docs.ansible.com/ansible/latest/user_guide/intro_dynamic_inventory.html#example-aws-ec2-external-inventory-script)
+
+[Ansible cloud modules](https://docs.ansible.com/ansible/latest/modules/list_of_cloud_modules.html)
