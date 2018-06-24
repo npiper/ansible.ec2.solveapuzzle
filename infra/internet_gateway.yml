@@ -1,4 +1,4 @@
----
+  ---
 # Create the domains internet and DMZ areas
 - name: Create internet routing and dmz
 

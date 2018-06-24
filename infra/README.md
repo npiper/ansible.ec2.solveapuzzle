@@ -38,7 +38,9 @@ The default region is `eu-west-1` (Irleand).  This value can be overwritten in v
        - Private Route Table (NAT)
        - Private Security Group (t.b.c)
 
+## DNS and Network Routing (Route 53)
 
+![Deploy](Route53.svg)
 
 ## RUNNING
 

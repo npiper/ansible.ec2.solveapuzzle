@@ -17,3 +17,8 @@
        hosted_zone_id: "{{ hosted_zones.[0].id }}"
        max_items: 20
      register: record_sets
+
+    - name: create a public zone
+      route53_zone:
+        zone: test.neilpiper.me
+          comment: test domain

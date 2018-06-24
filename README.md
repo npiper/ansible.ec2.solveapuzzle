@@ -13,8 +13,6 @@
 
 [DevOps instructions](devops/README.md)
 
-##
-
 
 ## Vagrant
 
@@ -108,6 +106,10 @@ roles/
   ```
 
 ## References
+
+[Ansible - best practices (Folder structure)](https://docs.ansible.com/ansible/latest/user_guide/playbooks_best_practices.html)
+
+[Ansible - Up and Running](https://www.safaribooksonline.com/library/view/ansible-up-and/9781491979792/)
 
 http://docs.ansible.com/ansible/latest/guide_aws.html#provisioning
 
