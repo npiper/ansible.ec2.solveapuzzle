@@ -50,7 +50,7 @@
         tags:
          Name: "{{ context }} Internet Gateway"
          module: ansible ec2_vpc_igw
-         domain_name: "{{ domain_name }}"
+           domain_name: "{{ domain_name }}"
          context: "{{ context }}"
         state:            "present"
       register: vpc_igw

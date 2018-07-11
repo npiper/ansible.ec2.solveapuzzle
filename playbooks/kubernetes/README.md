@@ -36,7 +36,7 @@ Define an  IAM Role, Role Policy and Instance profile for Controller instances
  * kubernetes
    - Role policy
  * Security Group 'kubernetes_api'
-   - Ingress - Port 6443 
+   - Ingress - Port 6443
    - Egress - All outbound traffic
 
  ```
@@ -51,6 +51,43 @@ Define an  IAM Role, Role Policy and Instance profile for Controller instances
 }
 ```
 
+# Local re-install
+
+https://stackoverflow.com/questions/45002364/how-to-upgrade-minikube
+
+```
+minikube delete
+sudo rm -rf ~/.minikube
+sudo rm -rf /usr/local/bin/minikube    # unlink existing minikube
+brew update
+brew cask reinstall minikube
+minikube start
+```
+
+## Install tiller / helm
+
+```
+brew install kubernetes-helm
+helm init
+```
+
+```
+helm install stable/grafana
+```
+
+# ansible
+
+## k8s_raw
+
+https://docs.ansible.com/ansible/2.5/modules/k8s_raw_module.html
+
+## helm
+
+https://docs.ansible.com/ansible/2.5/modules/helm_module.html?highlight=helm
+
+
 # References
 
 https://opencredo.com/kubernetes-aws-terraform-ansible-1/
+
+https://github.com/kubernetes/charts/tree/master/stable
