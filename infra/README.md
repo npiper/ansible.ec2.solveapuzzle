@@ -11,7 +11,7 @@ export AWS_ACCESS_KEY_ID={KEY_ID}
 export AWS_SECRET_ACCESS_KEY={SECRET}
 ```
 
-The default region is `eu-west-1` (Irleand).  This value can be overwritten in variables.
+The default region is `eu-west-1` (Ireland).  This value can be overwritten in variables.
 
 ### Software
 

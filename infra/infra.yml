@@ -34,25 +34,25 @@
       # We now use the set_fact module
 # to save the id of the VPC in a new variable.
 
-    - name:               Set VPC ID in variable
+    - name: Set VPC ID in variable
       set_fact:
-        vpc_id:           "{{ avpc.vpc.id }}"
+          vpc_id: "{{ avpc.vpc.id }}"
 
 ## PUBLIC - ZONING ##
 
 # Every VPC needs at least one Internet Gateway.
 # This component allows traffic between the VPC and the outside world.
 
-    - name:               Create Internet Gateway for VPC
+    - name:  Create Internet Gateway for VPC
       ec2_vpc_igw:
-        vpc_id:           "{{ vpc_id }}"
-        region:           "{{ aws_region }}"
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ aws_region }}"
         tags:
          Name: "{{ context }} Internet Gateway"
          module: ansible ec2_vpc_igw
-           domain_name: "{{ domain_name }}"
+         domain_name: "{{ domain_name }}"
          context: "{{ context }}"
-        state:            "present"
+        state:  "present"
       register: vpc_igw
 
     - name: Set Internet Gateway ID in variable
@@ -145,6 +145,41 @@
           threat: high
         subnets:
            - "{{ private_subnet_id }}"
+        routes:
+          - dest: "0.0.0.0/0"
+            gateway_id: "{{ nat_gateway_id }}"
+
+### Tools private subnet
+
+    - name: Create Private Tools subnet for Servers in 1a
+      ec2_vpc_subnet:
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ aws_region }}"
+        cidr: 10.0.2.0/28
+        az: "{{ aws_region }}a"
+        resource_tags:
+          Name: Tools Private Subnet 1A
+          zone: private
+          context: "{{ context }}"
+          threat: medium
+        state: present
+      register: tools_private_subnet_1a
+
+    - name: Set Tools Private Subnet ID in variable
+      set_fact:
+         tools_private_subnet_id: "{{ tools_private_subnet_1a.subnet.id }}"
+
+    - name: Set up private tools subnet route table
+      ec2_vpc_route_table:
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ aws_region }}"
+        tags:
+          Name: "Private Tools Route table to NAT Gateway"
+          context: "{{ context }}"
+          zone: dmz
+          threat: high
+        subnets:
+           - "{{ tools_private_subnet_id }}"
         routes:
           - dest: "0.0.0.0/0"
             gateway_id: "{{ nat_gateway_id }}"
