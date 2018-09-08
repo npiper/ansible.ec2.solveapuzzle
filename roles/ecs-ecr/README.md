@@ -1,5 +1,7 @@
 # Amazon ECS / ecr
 
+![Deploy](Untitled Diagram.svg)
+
 Setting up
 https://docs.aws.amazon.com/AmazonECS/latest/developerguide/get-set-up-for-amazon-ecs.html
 
@@ -8,7 +10,6 @@ https://docs.aws.amazon.com/AmazonECS/latest/developerguide/get-set-up-for-amazo
 * Internet Gateway
 * Key Pair
 
-![Deploy](Untitled Diagram.svg)
 
 ## Create an IAM Role for your Container Instances and Services
 
