@@ -8,6 +8,8 @@ https://docs.aws.amazon.com/AmazonECS/latest/developerguide/get-set-up-for-amazo
 * Internet Gateway
 * Key Pair
 
+![Deploy](Untitled Diagram.svg)
+
 ## Create an IAM Role for your Container Instances and Services
 
 Ansible IAM Roles
@@ -95,5 +97,6 @@ https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service_IAM_role.htm
 https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ECS_CLI_tutorial_EC2.html
 
 https://github.com/awslabs/ecs-refarch-continuous-deployment
+
 
 https://github.com/aws-samples/aws-cicd-docker-containers
