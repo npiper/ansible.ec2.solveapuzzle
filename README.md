@@ -29,9 +29,13 @@ https://blog.travis-ci.com/2017-11-30-testing-ansible-roles-using-docker-on-trav
 
 https://tasdikrahman.me/2017/04/06/Testing-your-ansible-roles-using-travis-CI/
 
+## Build EC2 images for deployments
+
+https://medium.com/devopslinks/build-your-own-ec2-machine-images-with-packer-ansible-on-aws-for-immutable-aws-deployments-f7dbe81934a1
+
 ### Pre-Requisites
 
-Encrypt your AWS Access keys in the travis-ci deployment
+Encrypt your AWS Access keys in the travis-ci deployment  
 
 ### References
 
@@ -116,3 +120,5 @@ http://docs.ansible.com/ansible/latest/guide_aws.html#provisioning
 [Ansible external inventory for AWS](https://docs.ansible.com/ansible/latest/user_guide/intro_dynamic_inventory.html#example-aws-ec2-external-inventory-script)
 
 [Ansible cloud modules](https://docs.ansible.com/ansible/latest/modules/list_of_cloud_modules.html)
+
+[Ansible EC2 create an image](https://www.agix.com.au/build-an-ec2-using-ansible-step-by-step/)

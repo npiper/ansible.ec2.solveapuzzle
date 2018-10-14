@@ -1,0 +1,20 @@
+---
+# This playbook sets up an Amazon Container environment
+
+- name: create a new ec2 key pair, returns generated private key
+  ec2_key:
+    name: my_keypair
+    force: false
+
+# Gather facts about any VPC with a tag key Name and value Example
+- name: Get matching VPC
+  ec2_vpc_net_facts:
+    filters:
+      "tag:module": ansible ec2_vpc_net
+      "tag:domain_name": "{{ domain_name }}"
+      "tag:context": "{{ context }}"
+  register: avpc
+
+- name: Set VPC ID in variable
+  set_fact:
+     vpc_id: "{{ avpc.vpc_id }}"
