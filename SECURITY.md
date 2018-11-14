@@ -16,6 +16,8 @@ Domain: `neilpiper.me`
 
 Certificate:   Let's encrypt
 
+![Deploy diagram](infra/SecOps-Certificates.png)
+
 ### Getting a certificate for the domain
 
 Let’s Encrypt uses the ACME protocol to verify that you control a given domain name and to issue you a certificate. To get a Let’s Encrypt certificate, you’ll need to choose a piece of ACME client software to use.
