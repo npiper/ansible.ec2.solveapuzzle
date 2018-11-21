@@ -8,7 +8,7 @@
  * Key / Token management
  * Secret management
  * Security monitoring & intrusion detection
-
+ * Transaction signing
 
 ## Domain & Certificates
 
@@ -30,25 +30,62 @@ First, the agent proves to the CA that the web server controls a domain. Then, t
 
 Let’s Encrypt identifies the server administrator by public key. The first time the agent software interacts with Let’s Encrypt, it generates a new key pair and proves to the Let’s Encrypt CA that the server controls one or more domains
 
+## Docker image to create certificates
 
+Created a docker image to execute this from Command line.
 
-#### Example Ubuntu 18 / Nginx installation
-
-```
-$ sudo apt-get update
-$ sudo apt-get install software-properties-common
-$ sudo add-apt-repository ppa:certbot/certbot
-$ sudo apt-get update
-$ sudo apt-get install python-certbot-nginx
-```
+https://github.com/npiper/aws-certbot
 
 ## idam
 
+keycloak
+
 http://www.keycloak.org/about.html
+
+https://hub.docker.com/r/jboss/keycloak/  
 
 Cloudflare
 
+# Certificate management
+https://github.com/cloudflare/certmgr (Expiry)
+
+
+https://github.com/cloudflare/cfssl ( SSL Signing etc;)
+
+CFSSL is CloudFlare's PKI/TLS swiss army knife. It is both a command line tool and an HTTP API server for signing, verifying, and bundling TLS certificates
+
+# Key and secret management.
+
 Vault
+https://www.vaultproject.io/
+
+https://learn.hashicorp.com/vault/getting-started/install
+
+Install launch vault
+Start server (Dev?)
+Storage - Encrypted EBS
+Backup in encrypted S3
+
+AWS Secrets engine
+https://learn.hashicorp.com/vault/getting-started/dynamic-secrets
+
+# Identity Model
+
+## Trusted roles - Outside org
+
+3rdPartySecurityRole (IDAM)
+
+
+## Trusted roles - Org
+
+Role: DomainSecurity Role
+
+## Internal roles for Sec Domain:
+
+Role: SecurityDomainAdmin
+Role: SecurityDomainDev
+Role: SecurityDomainBuild
+
 
 ## References
 
