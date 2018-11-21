@@ -8,7 +8,7 @@
  * Key / Token management
  * Secret management
  * Security monitoring & intrusion detection
- * Transaction signing
+ * Transaction signingls
 
 ## Security domain networking
 
@@ -39,7 +39,7 @@ Domain: `neilpiper.me`
 
 Certificate:   Let's encrypt
 
-![Deploy diagram](infra/SecOps-Certificates.png)
+![Deploy diagram](SecOps-Certificates.png)
 
 ### Getting a certificate for the domain
 
