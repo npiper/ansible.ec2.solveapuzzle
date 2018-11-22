@@ -1,0 +1,27 @@
+---
+# AWS tasks are run 'locally'
+
+# Authentication details should be passed in as arguments or exported in the shell before running this playbook
+# Ideally they should be stored in Hashicorp's 'Vault'
+# e.g.
+# export AWS_ACCESS_KEY_ID='my-access-key123'
+# export AWS_SECRET_ACCESS_KEY='sekrit23418'
+#
+# Run with `ansible-playbook -i testing infra.yml`
+
+## Create a VPC - non default
+- name: CREATE AWS ENVIRONMENT
+  hosts: localhost
+  connection: local
+  gather_facts: False
+
+  tasks:
+    - name: Lookup VPC
+      ec2_vpc_net_facts:
+       filters:
+        name: vpc-{{ domain_name }}
+      register: vpc_facts
+
+    - name: Set VPC ID in variable
+      set_fact:
+          vpc_id: "{{ vpc_facts.{0}.id }}"

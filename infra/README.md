@@ -48,7 +48,7 @@ The default region is `eu-west-1` (Ireland).  This value can be overwritten in v
 
 Perform a syntax check on the playbook, but do not execute it
 ```
-c
+ansible-playbook --syntax-check ../testing infra.yml
 ```
 
 ### Dry run

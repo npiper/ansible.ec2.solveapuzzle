@@ -10,6 +10,36 @@
  * Security monitoring & intrusion detection
  * Transaction signingls
 
+## Key management
+
+https://docs.aws.amazon.com/kms/latest/developerguide/overview.html
+
+```
+Create, describe, and list master keys
+
+Enable and disable master keys
+
+Create and view grants and access control policies for your master keys
+
+Enable and disable automatic rotation of the cryptographic material in a master key
+
+Import cryptographic material into an AWS KMS master key
+
+Tag your master keys for easier identification, categorizing, and tracking
+
+Create, delete, list, and update aliases, which are friendly names associated with your master keys
+
+Delete master keys to complete the key lifecycle
+
+With AWS KMS you can also perform the following cryptographic functions using master keys:
+
+Encrypt, decrypt, and re-encrypt data
+
+Generate data encryption keys that you can export from the service in plaintext or encrypted under a master key that doesn't leave the service
+
+Generate random numbers suitable for cryptographic applications
+```
+
 ## Security domain networking
 
 Private subnet - initially no internet exposure
@@ -21,7 +51,8 @@ Internal Domain to Security Domain (SG)
 
 Grants to access role:
 
-Monitoring / detection / MFA
+Monitoring / detection
+MFA / Auth tokens
 
 # Scenarios
 
