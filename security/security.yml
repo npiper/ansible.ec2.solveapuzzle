@@ -60,6 +60,12 @@
             from_port: 80
             to_port: 80
             cidr_ip: 10.0.8.0/28
+            rule_desc: Allow basic HTTP port 80 access from this subnet
+          - proto: tcp
+            from_port: 22
+            to_port: 22
+            cidr_ip: 10.0.8.0/28
+            rule_desc: Allow basic ssh access from this subnet
             #ports:
             #- 8080
             #- 443
@@ -78,6 +84,7 @@
             from_port: 80
             to_port: 80
             cidr_ip: 10.0.0.0/16
+            rule_desc: Allow basic port 80 access from all internal domains
             #rule_desc: allow all on port 80, 443, 9443 from Internal subnet
 
     - name: Create Domain Security role
@@ -102,7 +109,7 @@
           - arn:aws:iam::aws:policy/AWSCertificateManagerFullAccess
           - arn:aws:iam::aws:policy/IAMFullAccess
           - arn:aws:iam::aws:policy/SecretsManagerReadWrite
-          - arn:aws:iam::aws:policy/IAMUserSSHKeys 
+          - arn:aws:iam::aws:policy/IAMUserSSHKeys
         #description: Security domain Administrator role
 
     - name: Create VPN subnet
