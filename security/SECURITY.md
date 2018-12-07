@@ -1,6 +1,34 @@
 # SECURITY DOMAIN
 
-## Services
+## Pre-Requisites
+
+Run the playbook in the `infra` role / playbook to create required VPC's and initial subnets.
+
+This playbook will attempt to lookup matching resources based on tags created in that playbook.
+
+## RUNNING
+
+### Check syntax
+
+Perform a syntax check on the playbook, but do not execute it
+```
+ansible-playbook --syntax-check ../testing security.yml
+```
+
+### Dry run
+don't make any changes; instead, try to predict some of the changes that may occur
+
+```
+ansible-playbook --check -i ../testing security.yml
+```
+
+
+### Run in verbose Mode
+```
+ansible-playbook -vvv -i ../testing security.yml
+```
+
+# Services
 
  * Certificate issuance & management
  * Cryptographic assets & services
@@ -101,6 +129,10 @@ http://www.keycloak.org/about.html
 https://hub.docker.com/r/jboss/keycloak/  
 
 Cloudflare
+
+# Network overview
+
+![Networks](SecurityGroups-Network.png)
 
 # Certificate management
 https://github.com/cloudflare/certmgr (Expiry)

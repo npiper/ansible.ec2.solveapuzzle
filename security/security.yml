@@ -52,76 +52,104 @@
     # A security group that exposes admin ports of Security services
     - name: Create admin sec Group
       ec2_group:
-        name: SecurityAdminGroup
-        description: Security Domain security group
-        vpc_id: {{ vpc_id }}
+        name: AdminSecurityGroup
+        description: Security Domain Admin security group
+        vpc_id: "{{ vpc_id }}"
         rules:
           - proto: tcp
-            ports:
-            - 80
-            - 443
-            - 9443
-            cidr_ip: 10.0.0.0/0
-            rule_desc: allow all on port 80, 443, 9443 from Internal subnet
-          - proto: tcp
-            from_port: 22
-            to_port: 22
-            cidr_ip: 10.0.8.0/0
-            rule_desc: allow ssh from inside the security domain
+            from_port: 80
+            to_port: 80
+            cidr_ip: 10.0.8.0/28
+            #ports:
+            #- 8080
+            #- 443
+            #- 9443
+            # -22 / 10.0.8.0/0
+            #rule_desc: allow HTTP Admin ports (80, 443, 9443 from Internal subnet and ssh from inside the security domain
 
     # A security group that exposes standard ports of Security services
     - name: Create domain sec Group
       ec2_group:
-        name: SecurityUserGroup
+        name: DomainSecurityGroup
         description: Security Domain security group
-        vpc_id: {{ vpc_id }}
+        vpc_id: "{{ vpc_id }}"
         rules:
           - proto: tcp
-            ports:
-            - 80
-            - 443
-            cidr_ip: 10.0.0.0/0
-            rule_desc: allow all on port 80, 443, 9443 from Internal subnet
+            from_port: 80
+            to_port: 80
+            cidr_ip: 10.0.0.0/16
+            #rule_desc: allow all on port 80, 443, 9443 from Internal subnet
 
-    - name: Create Domain Security User role
+    - name: Create Domain Security role
       iam_role:
-        name: security_user_role
+        name: security_domain_role
         assume_role_policy_document: "{{ lookup('file','security_user_policy.json') }}"
-        description: Security domain User role
+        state: present
+        managed_policy:
+          - arn:aws:iam::aws:policy/AWSCertificateManagerPrivateCAReadOnly
+          - arn:aws:iam::aws:policy/SecretsManagerReadWrite
+
+        #description: Security domain User role
 
     - name: Create Security Admin Role
       iam_role:
         name: security_admin_role
         assume_role_policy_document: "{{ lookup('file','security_admin_policy.json') }}"
-        description: Security domain Administrator role
+        state: present
+        managed_policy:
+          - arn:aws:iam::aws:policy/AWSKeyManagementServicePowerUser
+          - arn:aws:iam::aws:policy/service-role/AWSShieldDRTAccessPolicy
+          - arn:aws:iam::aws:policy/AWSCertificateManagerFullAccess
+          - arn:aws:iam::aws:policy/IAMFullAccess
+          - arn:aws:iam::aws:policy/SecretsManagerReadWrite
+          - arn:aws:iam::aws:policy/IAMUserSSHKeys 
+        #description: Security domain Administrator role
 
     - name: Create VPN subnet
+      debug:
+        msg: "TO DO: Create A VPN subnet"
 
     - name: Create Virtual private gateway
+      debug:
+        msg: "TO DO: Create A Virtual private gateway"
 
 
     - name: Create route table including VPN
+      debug:
+        msg: "TO DO: Create Route table with the VPN"
 
     - name: Create Secure S3 Bucket for sec domain
+      debug:
+        msg: "TO DO: Create S3 Bucket for sec domain"
 
-    - name: Store assets in S3 bucket (Backup)
+    ##- name: Store assets in S3 bucket (Backup)
+
 
     - name: Create Amazon Secret management service
+      debug:
+        msg: "TO DO: Register an Amazon Secret management service"
 
     - name: Amazon KMS
+      debug:
+        msg: "TO DO: Register an Amazon Key management service"
 
     - name: Store Certs in Secret management
+      debug:
+        msg: "TO DO: Store Certificates in Secret management"
 
     - name: Store Private keys in KMS
+      debug:
+        msg: "TO DO: Store Private keys in Key management services"
 
-    - name: Create Encryption key for domain (Label)
+    ##- name: Create Encryption key for domain (Label)
 
-    - name: Create EC2 Key Pair
 
-    - name: Create Security EBS Volume (Encrypted )
+    ##- name: Create EC2 Key Pair
 
-    - name: Deploy AMI's
+    ##- name: Create Security EBS Volume (Encrypted )
 
-    - name: Establish Cloudwatch monitoring
+    ##- name: Deploy AMI's
 
-    - name: Create DDOS AWS Shield
+  ##  - name: Establish Cloudwatch monitoring
+
+  ##  - name: Create DDOS AWS Shield
