@@ -7,7 +7,10 @@
 # export AWS_ACCESS_KEY_ID='my-access-key123'
 # export AWS_SECRET_ACCESS_KEY='sekrit23418'
 #
-# Run with `ansible-playbook -i testing infra.yml`
+# Assumption: You have run the infra playbook ahead of this
+# Run with `ansible-playbook -i testing security.yml`
+# Syntax check: ansible-playbook --syntax-check -i ../testing security.yml
+# Dry Run: ansible-playbook --check -i ../testing security.yml
 
 ## Create a VPC - non default
 - name: CREATE AWS ENVIRONMENT
@@ -18,10 +21,107 @@
   tasks:
     - name: Lookup VPC
       ec2_vpc_net_facts:
-       filters:
-        name: vpc-{{ domain_name }}
+        region: "{{ aws_region }}"
+        filters:
+          "tag:Name": vpc-{{ domain_name }}
       register: vpc_facts
 
     - name: Set VPC ID in variable
       set_fact:
-          vpc_id: "{{ vpc_facts.{0}.id }}"
+          vpc_id: "{{ vpc_facts.vpcs[0].id }}"
+
+    - name: Create private security subnet in VPC 10.0.8.0
+      ec2_vpc_subnet:
+            vpc_id: "{{ vpc_id }}"
+            region: "{{ aws_region }}"
+            cidr: 10.0.8.0/28
+            az: "{{ aws_region }}a"
+            resource_tags:
+              Name: Security Domain Private Subnet 1A
+              zone: private
+              context: "{{ context }}"
+              threat: high
+              domain: security
+            state: present
+      register: sec_subnet_1a
+
+    - name: Set Security Private Subnet ID in variable
+      set_fact:
+         sec_private_subnet_id: "{{ sec_subnet_1a.subnet.id }}"
+
+    # A security group that exposes admin ports of Security services
+    - name: Create admin sec Group
+      ec2_group:
+        name: SecurityAdminGroup
+        description: Security Domain security group
+        vpc_id: {{ vpc_id }}
+        rules:
+          - proto: tcp
+            ports:
+            - 80
+            - 443
+            - 9443
+            cidr_ip: 10.0.0.0/0
+            rule_desc: allow all on port 80, 443, 9443 from Internal subnet
+          - proto: tcp
+            from_port: 22
+            to_port: 22
+            cidr_ip: 10.0.8.0/0
+            rule_desc: allow ssh from inside the security domain
+
+    # A security group that exposes standard ports of Security services
+    - name: Create domain sec Group
+      ec2_group:
+        name: SecurityUserGroup
+        description: Security Domain security group
+        vpc_id: {{ vpc_id }}
+        rules:
+          - proto: tcp
+            ports:
+            - 80
+            - 443
+            cidr_ip: 10.0.0.0/0
+            rule_desc: allow all on port 80, 443, 9443 from Internal subnet
+
+    - name: Create Domain Security User role
+      iam_role:
+        name: security_user_role
+        assume_role_policy_document: "{{ lookup('file','security_user_policy.json') }}"
+        description: Security domain User role
+
+    - name: Create Security Admin Role
+      iam_role:
+        name: security_admin_role
+        assume_role_policy_document: "{{ lookup('file','security_admin_policy.json') }}"
+        description: Security domain Administrator role
+
+    - name: Create VPN subnet
+
+    - name: Create Virtual private gateway
+
+
+    - name: Create route table including VPN
+
+    - name: Create Secure S3 Bucket for sec domain
+
+    - name: Store assets in S3 bucket (Backup)
+
+    - name: Create Amazon Secret management service
+
+    - name: Amazon KMS
+
+    - name: Store Certs in Secret management
+
+    - name: Store Private keys in KMS
+
+    - name: Create Encryption key for domain (Label)
+
+    - name: Create EC2 Key Pair
+
+    - name: Create Security EBS Volume (Encrypted )
+
+    - name: Deploy AMI's
+
+    - name: Establish Cloudwatch monitoring
+
+    - name: Create DDOS AWS Shield

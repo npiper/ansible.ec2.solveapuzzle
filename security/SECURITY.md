@@ -160,3 +160,5 @@ https://ietf-wg-acme.github.io/acme/draft-ietf-acme-acme.html
 
 
 [AWS blog - TLS Security to your container](https://aws.amazon.com/blogs/compute/maintaining-transport-layer-security-all-the-way-to-your-container-part-2-using-aws-certificate-manager-private-certificate-authority/)
+
+[AWS - VPN](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Scenario3.html)
