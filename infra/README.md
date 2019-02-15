@@ -27,7 +27,8 @@ The default region is `eu-west-1` (Ireland).  This value can be overwritten in v
 - AWS Region (Config)
  - [VPC]()
  - [Internet Gateway](http://docs.ansible.com/ansible/latest/ec2_vpc_igw_module.html)
- - Public [Route Table](http://docs.ansible.com/ansible/latest/ec2_vpc_route_table_module.html) 1 (Internet GW)
+ - Public [Routen
+  Table](http://docs.ansible.com/ansible/latest/ec2_vpc_route_table_module.html) 1 (Internet GW)
  - Public [Security group](http://docs.ansible.com/ansible/latest/ec2_group_module.html) (SSH)
    - Availability Zone
      - [Public Subnet AZ1](http://docs.ansible.com/ansible/latest/ec2_vpc_subnet_module.html)
@@ -69,3 +70,5 @@ ansible-playbook -vvv -i ../testing infra.yml
 http://docs.ansible.com/ansible/latest/guide_aws.html#provisioning
 
 http://jeremievallee.com/2016/07/27/aws-vpc-ansible/
+
+https://www.linuxschoolonline.com/use-ansible-to-build-and-manage-aws-ec2-instances/

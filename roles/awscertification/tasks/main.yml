@@ -1,0 +1,310 @@
+## Create a VPC - non default
+- name: CREATE AWS ENVIRONMENT
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    instance_type: t2.micro
+    ec2_count: 1
+
+  tasks:
+    - name: Create VPC
+      ec2_vpc_net:
+       name: vpc-{{ domain_name }}
+       cidr_block: 10.0.0.0/16
+       region: "{{ aws_region }}"
+       dns_support: true
+       dns_hostnames: true
+       tags:
+         module: ansible ec2_vpc_net
+         domain_name: "{{ domain_name }}"
+         context: "{{ context }}"
+       tenancy: default
+       state: present
+      register: avpc
+
+# We now use the set_fact module
+# to save the id of the VPC in a new variable.
+
+    - name: Set VPC ID in variable
+      set_fact:
+          vpc_id: "{{ avpc.vpc.id }}"
+
+# Every VPC needs at least one Internet Gateway.
+# This component allows traffic between the VPC and the outside world.
+
+    - name:  Create Internet Gateway for VPC
+      ec2_vpc_igw:
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ aws_region }}"
+        tags:
+         Name: "{{ context }} Internet Gateway"
+         module: ansible ec2_vpc_igw
+         domain_name: "{{ domain_name }}"
+         context: "{{ context }}"
+        state:  "present"
+      register: vpc_igw
+
+    - name: Set Internet Gateway ID in variable
+      set_fact:
+           igw_id: "{{ vpc_igw.gateway_id }}"
+
+## Public Facing Subnet 1a
+
+    - name: Create Public subnet for App Servers in 1a
+      ec2_vpc_subnet:
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ aws_region }}"
+        cidr: 10.0.0.0/28
+        az: "{{ aws_region }}a"
+        map_public: yes
+        resource_tags:
+          Name: App Subnet 1A
+          zone: public
+          context: "{{ context }}"
+          threat: high
+        state: present
+      register: public_subnet_1a
+
+    - name: Set Public Subnet 1a ID in variable
+      set_fact:
+        public_subnet1a_id: "{{ public_subnet_1a.subnet.id }}"
+
+## Public Facing Subnet - 1c
+
+    - name: Create Public subnet for App Servers in 1c
+      ec2_vpc_subnet:
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ aws_region }}"
+        cidr: 10.0.1.0/28
+        az: "{{ aws_region }}c"
+        map_public: yes
+        resource_tags:
+          Name: App Subnet 1C
+          zone: public
+          context: "{{ context }}"
+          threat: high
+        state: present
+      register: public_subnet_1c
+
+    - name: Set Public Subnet 1c ID in variable
+      set_fact:
+        public_subnet1c_id: "{{ public_subnet_1c.subnet.id }}"
+
+    - name: Set up public subnet route table for Internet Traffic in 1a, 1c AZ's
+      ec2_vpc_route_table:
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ aws_region }}"
+        purge_routes: true
+        purge_subnets: true
+        state: present
+        tags:
+          Name: "Public Route Table"
+          context: "{{ context }}"
+          zone: public
+          threat: high
+        subnets:
+          - "{{ public_subnet1a_id }}"
+          - "{{ public_subnet1c_id }}"
+        routes:
+          - dest: "0.0.0.0/0"
+            gateway_id: "{{ igw_id }}"
+
+## DMZ - GATEWAY Servers
+
+    - name: Create new NAT gateway in Public subnet AZ1a
+      ec2_vpc_nat_gateway:
+        state: present
+        region: "{{ aws_region }}"
+        subnet_id: "{{ public_subnet1a_id }}"
+        wait: yes
+        if_exist_do_not_create: true
+        wait: true
+      register: nat_gateway_1a
+
+    - name: Set AZ1a Nat Gateway ID in variable
+      set_fact:
+        nat_gateway_id_1a: "{{ nat_gateway_1a.nat_gateway_id }}"
+
+    - name: Create new NAT gateway in Public subnet AZ1c
+      ec2_vpc_nat_gateway:
+        state: present
+        region: "{{ aws_region }}"
+        subnet_id: "{{ public_subnet1c_id }}"
+        wait: yes
+        if_exist_do_not_create: true
+        wait: true
+      register: nat_gateway_1c
+
+    - name: Set AZ1c Nat Gateway ID in variable
+      set_fact:
+        nat_gateway_id_1c: "{{ nat_gateway_1c.nat_gateway_id }}"
+
+## PRIVATE ZONE - Only comms to/from Internet via DMZ NAT Gateway or Egress
+
+    - name: Create Private subnet for Servers in 1a
+      ec2_vpc_subnet:
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ aws_region }}"
+        cidr: 10.0.2.0/28
+        az: "{{ aws_region }}a"
+        resource_tags:
+          Name: Private Subnet 1A
+          zone: private
+          context: "{{ context }}"
+          threat: low
+        state: present
+      register: private_subnet_1a
+
+    - name: Set Private Subnet ID 1a in variable
+      set_fact:
+         private_subnet_1a_id: "{{ private_subnet_1a.subnet.id }}"
+
+    - name: Create Private subnet for Servers in 1c
+      ec2_vpc_subnet:
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ aws_region }}"
+        cidr: 10.0.3.0/28
+        az: "{{ aws_region }}c"
+        resource_tags:
+          Name: Private Subnet 1C
+          zone: private
+          context: "{{ context }}"
+          threat: low
+        state: present
+      register: private_subnet_1c
+
+    - name: Set Private Subnet ID 1c in variable
+      set_fact:
+         private_subnet_1c_id: "{{ private_subnet_1c.subnet.id }}"
+
+
+    - name: Set up private subnet route table 1a
+      ec2_vpc_route_table:
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ aws_region }}"
+        tags:
+          Name: "Private Route table to NAT Gateway - 1a"
+          context: "{{ context }}"
+          zone: dmz
+          threat: high
+        subnets:
+           - "{{ private_subnet_1a_id }}"
+        routes:
+          - dest: "0.0.0.0/0"
+            gateway_id: "{{ nat_gateway_id_1a}}"
+
+    - name: Set up private subnet route table 1c
+      ec2_vpc_route_table:
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ aws_region }}"
+        tags:
+          Name: "Private Route table to NAT Gateway - 1c"
+          context: "{{ context }}"
+          zone: dmz
+          threat: high
+        subnets:
+           - "{{ private_subnet_1c_id }}"
+        routes:
+          - dest: "0.0.0.0/0"
+            gateway_id: "{{ nat_gateway_id_1c}}"
+
+### Networking complete
+
+### Security groups
+
+#### ELB Port 80, Source 0.0.0.0
+    - name: ELB Security Group
+      ec2_group:
+        name: "elb_sg"
+        description: elastic load balancer sg with rule descriptions
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ aws_region }}"
+        rules:
+          - proto: tcp
+            ports:
+            - 80
+            cidr_ip: 0.0.0.0/0
+            rule_desc: allow all on port 80
+      register: elb_sg
+
+    - debug:
+        msg: "Created Security group for elb's {{ elb_sg.group_id}}"
+
+#### Web Port 80, Source ELb_SG
+    - name: Web server Security Group
+      ec2_group:
+        name: "web_sg"
+        description: web sg with rule descriptions
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ aws_region }}"
+        rules:
+          - proto: tcp
+            ports:
+              - 80
+            group_name:
+              - "{{ elb_sg.group_name }}"
+            rule_desc: allow elb traffic on port 80
+      register: web_sg
+
+    - debug:
+        msg: "Created Security group for web servers {{ web_sg.group_id}}"
+
+#### Db Port 3306, Source Web_SG
+    - name: DB Security Group
+      ec2_group:
+        name: "db_sg"
+        description: db sg with rule descriptions
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ aws_region }}"
+        rules:
+          - proto: tcp
+            ports:
+              - 3306
+            group_name:
+              - "{{ web_sg.group_name }}"
+            rule_desc: allow webserver traffic on 3306
+      register: db_sg
+
+
+### MySQL RDS Multi-AZ
+
+# Add or change a subnet group
+    - rds_subnet_group:
+         state: present
+         name: db-subnet-group
+         region: "{{ aws_region }}"
+         description: Subnet group for DB's
+         subnets:
+           - "{{ private_subnet_1a_id }}"
+           - "{{ private_subnet_1c_id }}"
+
+    - rds:
+        command: create
+        instance_name: new-database
+        region: "{{ aws_region }}"
+        db_engine: MySQL
+        size: 10
+        instance_type: db.m1.small
+        username: mysql_admin
+        password: 1nsecure
+        multi_zone: yes
+        #security_groups: "{{ db_sg.group_id }}"
+        subnet: db-subnet-group
+        tags:
+          Environment: testing
+          Application: cms
+
+### ELB HTTP 80 - pub subnets
+
+
+#### Health check: Port 80 /index.html
+
+### Auto scaling group
+#### AMI: latest Amazon Linux AMI
+
+
+### Route 53 Hosted zone
+
+### Alias A Record
+#### Type: A—IPv4 Address , simple policy

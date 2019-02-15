@@ -1,0 +1,14 @@
+galaxy_info:
+  author: npiper
+  description: AWS Certification Setup example
+  issue_tracker_url: https://github.com/npiper/ansible.ec2.solveapuzzle/issues
+  license: 'MIT'
+  min_ansible_version: 2.1.0.0
+  platforms:
+  - name: Ubuntu
+    versions:
+    - xenial
+  galaxy_tags:
+    - certbot
+
+dependencies: []

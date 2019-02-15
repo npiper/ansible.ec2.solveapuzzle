@@ -1,0 +1,4 @@
+[all:vars]
+aws_region="eu-west-1"
+context="testing"
+domain_name="dev.neilpiper.me"
