@@ -281,7 +281,7 @@
 
     - rds:
         command: create
-        instance_name: new-database
+        instance_name: awscert-database
         region: "{{ aws_region }}"
         db_engine: MySQL
         size: 10
@@ -295,13 +295,53 @@
           Environment: testing
           Application: cms
 
-### ELB HTTP 80 - pub subnets
+### ELB HTTP 80 - across 2 public subnets
+### elb security group
+### Health check: Port 80 /index.html
+
+    - ec2_elb_lb:
+       name: "elb1"
+       state: present
+       region: "{{ aws_region }}"
+       subnets:
+          - "{{ public_subnet1a_id }}"
+          - "{{ public_subnet1c_id }}"
+       security_group_ids:
+         - "{{ elb_sg.group_id }}"
+       listeners:
+          - protocol: http
+            load_balancer_port: 80
+            instance_port: 80
+            proxy_protocol: True
 
 
-#### Health check: Port 80 /index.html
+## Launch config
+#### AMI: latest Amazon Linux AMI
+    - ec2_lc:
+       name: launch-config-amz
+       image_id: ami-07f2bbf97bdf932e6
+       key_name: cert-example
+       security_groups: ['web_sg' ]
+       instance_type: t1.micro
+       user_data_path: ./files/launch.sh
+
+
 
 ### Auto scaling group
-#### AMI: latest Amazon Linux AMI
+
+
+    - ec2_asg:
+       name: ch14_asg
+       load_balancers: [ 'elb1' ]
+       availability_zones: [ '{{ aws_region }}a', '{{ aws_region }}c' ]
+       launch_config_name: 'launch-config-amz'
+       min_size: 2
+       max_size: 4
+       desired_capacity: 2
+       vpc_zone_identifier: [ '{{ public_subnet1a_id }}', '{{ public_subnet1c_id }}' ]
+       tags:
+         - environment: production
+           propagate_at_launch: no
 
 
 ### Route 53 Hosted zone
