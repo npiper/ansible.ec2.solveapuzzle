@@ -1,0 +1,75 @@
+###### NETWORKING COMPLETE - SETUP EC2 infrastructure
+    - name: START EC2 Setup
+      debug:
+         msg: "STARTING --- EC2 SETUP ---"
+
+    - name: Create security group for public traffic
+      ec2_group:
+        name: public_webservers_sg
+        description: A public webservers security group
+        region: "{{ aws_region }}"
+        vpc_id: "{{ vpc_id }}"
+        rules:
+          - proto: tcp
+            from_port: 22
+            to_port: 22
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: 0.0.0.0/0
+        rules_egress:
+          - proto: all
+            cidr_ip: 0.0.0.0/0
+
+
+    - name: Create a new EC2 key
+      ec2_key:
+          name: "{{ domain_name }}-key"
+          region: "{{ aws_region }}"
+      register: ec2_key_result
+
+    - name: Save private key in a local safe space
+      copy: content="{{ ec2_key_result.key.private_key }}" dest="./aws.{{ domain_name }}.pem" mode=0400
+      when: ec2_key_result.changed
+
+    - name: Launch EC2 instance in public subnet
+      ec2:
+        group: public_webservers_sg
+        instance_type: "{{ instance_type }}"
+        ##  Canonical, Ubuntu, 16.04 LTS, amd64 xenial image build on 2018-05-22
+        image: ami-58d7e821
+        vpc_subnet_id: "{{ public_subnet1a_id }}"
+        assign_public_ip: yes
+        wait: true
+        region: "{{ aws_region }}"
+        keypair: "{{ domain_name }}-key"
+        count: "{{ ec2_count }}"
+      register: ec2-instance
+
+    - name: Add the newly created host so that we can further contact it
+      add_host:
+        name: "{{ item.public_ip }}"
+        groups: webservers
+      with_items: "{{ ec2.instances }}"
+
+    - name: Add tag to Instance(s)
+      ec2_tag:
+        resource: "{{ item.id }}"
+        region: "{{ aws_region }}"
+        state: "present"
+      with_items: "{{ ec2.instances }}"
+      args:
+        tags:
+         Type: webserver
+
+    - name: Wait for SSH to come up
+      wait_for:
+         host: "{{ item.public_ip }}"
+         port: 22
+         state: started
+      with_items: "{{ ec2.instances }}"

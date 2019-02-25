@@ -1,10 +1,17 @@
 ---
 # This playbook sets up an Amazon Container environment
 
-- name: create a new ec2 key pair, returns generated private key
+- name: create a new ec2 key pair 'ecs_keypair', returns generated private key
   ec2_key:
-    name: my_keypair
+    name: ecs_keypair
+    region: "{{ aws_region }}"
     force: false
+  register: ec2_key_result
+
+
+ - name: Save private key in a local safe space
+   copy: content="{{ ec2_key_result.key.private_key }}" dest="./aws.{{ domain_name }}.pem" mode=0400
+   when: ec2_key_result.changed
 
 # Gather facts about any VPC with a tag key Name and value Example
 - name: Get matching VPC
@@ -18,3 +25,82 @@
 - name: Set VPC ID in variable
   set_fact:
      vpc_id: "{{ avpc.vpc_id }}"
+
+#  Amazon ECS container agent
+# Calss to --> Amazon ECS API
+# Create ECS IAM Role // AmazonEc2ContainerServiceForEC2Role.policy
+ - name: Create ECS API Role
+      iam_role:
+        name: ecs_api_role
+        assume_role_policy_document: "{{ lookup('file','./defaults/AmazonEc2ContainerServiceForEC2Role.policy') }}"
+        state: present
+
+# Amazon ECS Container agent
+# calls to EC2, ELB API's
+
+# Create ECS Service Scheduler IAM Role
+# Create ECS IAM Role // AmazonEC2ContainerServiceRole.policy
+ - name: Create ECS Service Scheduler Role
+   iam_role:
+      name: ecs_scheduler_role
+      assume_role_policy_document: "{{ lookup('file','./defaults/AmazonEC2ContainerServiceRole.policy') }}"
+      state: present
+
+# Fargate launch type - pull images from ECR or use awslogs driver
+# Create ECS Task Execution IAM Role
+ - name: Create ECS Service Scheduler Role
+   iam_role:
+      name: ecs_taskexecutor_role
+      assume_role_policy_document: "{{ lookup('file','./defaults/AmazonECSTaskExecutionRolePolicy.policy') }}"
+      state: present
+
+ - name: Find my public ip
+   uri:
+      url: http://ifconfig.me/ip
+    return_content: yes
+   register: ip_response
+
+# Security Group - firewall for associated container instances
+# SSH (currentIP/32)
+# HTTP (0.0.0.0/0)
+# HTTPS (0.0.0.0/0)
+ - name: Create EC2 Security Group for ECS access
+   ec2_group:
+    name: ecs_secgroup
+    description: ECS Security Group for docker images
+    vpc_id: "{{ vpc_id }}"
+    region: "{{ aws_region }}"
+    rules:
+      - proto: ssh
+        ports:
+        - 22
+        cidr_ip: "{{ ip_response }}/32"
+        rule_desc: allow ssh from Port 80 from local IP
+      - proto: http
+        ports:
+          - 80
+        cidr_ip: 0.0.0.0/0
+        rule_desc: allows http traffic from internet
+      - proto: https
+        ports:
+          - 443
+        cidr_ip: 0.0.0.0/0
+        rule_desc: allows https traffic from internet
+
+# Pre-Requisites
+
+# Create ECS Cluster
+ - name: Wait for register
+   ecs_cluster:
+     name: ecs_cluster
+     state: has_instances
+     delay: 10
+     repeat: 10
+   register: task_output
+
+
+# Create ECS Service
+
+# Create ECS Taskdefinition
+
+# Create ECS Task (Run)
