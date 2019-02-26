@@ -158,12 +158,17 @@
       instance_type: t2.micro
       ##  Canonical, Ubuntu, 16.04 LTS, amd64 xenial image build on 2018-05-22
       image: ami-02a2ea2b210628cc5
+      instance_profile_name: ecs_api_role
       vpc_subnet_id: "{{ subnet_ids[0] }}"
       assign_public_ip: yes
       wait: true
       region: "{{ aws_region }}"
       keypair: "ecs_keypair"
       count: "1"
+      user_data: "#!/bin/bash \necho ECS_CLUSTER=ecs_cluster >> /etc/ecs/ecs.config"
+      instance_tags:
+        type: ecs
+        description: eu-west-1 Amazon ECS-optimized Amazon Linux 2
     register: ec2-instance-1a
 
   - name: Launch ECS AMI EC2 instance in public subnet 1c
@@ -172,16 +177,18 @@
       instance_type: t2.micro
       ##  Canonical, Ubuntu, 16.04 LTS, amd64 xenial image build on 2018-05-22
       image: ami-02a2ea2b210628cc5
+      instance_profile_name: ecs_api_role
       vpc_subnet_id: "{{ subnet_ids[1] }}"
       assign_public_ip: yes
       wait: true
       region: "{{ aws_region }}"
       keypair: "ecs_keypair"
       count: "1"
+      user_data: "#!/bin/bash \necho ECS_CLUSTER=ecs_cluster >> /etc/ecs/ecs.config"
+      instance_tags:
+        type: ecs
+        description: eu-west-1 Amazon ECS-optimized Amazon Linux 2
     register: ec2-instance-1c
-
-
-
 
   # Create ECS Taskdefinition
 
