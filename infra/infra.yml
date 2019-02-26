@@ -82,6 +82,28 @@
       set_fact:
         public_subnet1a_id: "{{ public_subnet_1a.subnet.id }}"
 
+## Public Facing Subnet - 1c
+
+    - name: Create Public subnet for App Servers in 1c
+      ec2_vpc_subnet:
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ aws_region }}"
+        cidr: 10.0.1.0/28
+        az: "{{ aws_region }}c"
+        map_public: yes
+        resource_tags:
+          Name: App Subnet 1C
+          zone: public
+          context: "{{ context }}"
+          threat: high
+        state: present
+      register: public_subnet_1c
+
+    - name: Set Public Subnet 1c ID in variable
+      set_fact:
+        public_subnet1c_id: "{{ public_subnet_1c.subnet.id }}"
+
+
 
     - name: Set up public subnet route table for Internet Traffic
       ec2_vpc_route_table:
@@ -97,6 +119,7 @@
           threat: high
         subnets:
           - "{{ public_subnet1a_id }}"
+          - "{{ public_subnet1c_id }}"
         routes:
           - dest: "0.0.0.0/0"
             gateway_id: "{{ igw_id }}"
@@ -115,7 +138,22 @@
 
     - name: Set AZ1a Nat Gateway ID in variable
       set_fact:
-        nat_gateway_id: "{{ nat_gateway_1a.nat_gateway_id }}"
+        nat_gateway_id_1a: "{{ nat_gateway_1a.nat_gateway_id }}"
+
+
+    - name: Create new NAT gateway in Public subnet AZ1c
+      ec2_vpc_nat_gateway:
+        state: present
+        region: "{{ aws_region }}"
+        subnet_id: "{{ public_subnet1c_id }}"
+        wait: yes
+        if_exist_do_not_create: true
+        wait: true
+      register: nat_gateway_1c
+
+    - name: Set AZ1c Nat Gateway ID in variable
+      set_fact:
+        nat_gateway_id_1c: "{{ nat_gateway_1c.nat_gateway_id }}"
 
 ### PRIVATE ZONE - Only comms to/from Internet via DMZ NAT Gateway or Egress
 
@@ -123,7 +161,7 @@
       ec2_vpc_subnet:
         vpc_id: "{{ vpc_id }}"
         region: "{{ aws_region }}"
-        cidr: 10.0.1.0/28
+        cidr: 10.0.2.0/28
         az: "{{ aws_region }}a"
         resource_tags:
           Name: Private Subnet 1A
@@ -137,12 +175,31 @@
       set_fact:
          private_subnet_id: "{{ private_subnet_1a.subnet.id }}"
 
-    - name: Set up private subnet route table
+    - name: Create Private subnet for Servers in 1c
+      ec2_vpc_subnet:
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ aws_region }}"
+        cidr: 10.0.3.0/28
+        az: "{{ aws_region }}c"
+        resource_tags:
+          Name: Private Subnet 1C
+          zone: private
+          context: "{{ context }}"
+          threat: low
+        state: present
+      register: private_subnet_1c
+
+    - name: Set Private Subnet ID 1c in variable
+      set_fact:
+         private_subnet_1c_id: "{{ private_subnet_1c.subnet.id }}"
+
+
+    - name: Set up private subnet route table 1a
       ec2_vpc_route_table:
         vpc_id: "{{ vpc_id }}"
         region: "{{ aws_region }}"
         tags:
-          Name: "Private Route table to NAT Gateway"
+          Name: "Private Route table to NAT Gateway 1a"
           context: "{{ context }}"
           zone: dmz
           threat: high
@@ -150,7 +207,22 @@
            - "{{ private_subnet_id }}"
         routes:
           - dest: "0.0.0.0/0"
-            gateway_id: "{{ nat_gateway_id }}"
+            gateway_id: "{{ nat_gateway_id_1a }}"
+
+    - name: Set up private subnet route table 1c
+      ec2_vpc_route_table:
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ aws_region }}"
+        tags:
+          Name: "Private Route table to NAT Gateway - 1c"
+          context: "{{ context }}"
+          zone: dmz
+          threat: high
+        subnets:
+           - "{{ private_subnet_1c_id }}"
+        routes:
+          - dest: "0.0.0.0/0"
+            gateway_id: "{{ nat_gateway_id_1c}}"
 
 ### Tools private subnet
 
@@ -158,7 +230,7 @@
       ec2_vpc_subnet:
         vpc_id: "{{ vpc_id }}"
         region: "{{ aws_region }}"
-        cidr: 10.0.2.0/28
+        cidr: 10.0.4.0/28
         az: "{{ aws_region }}a"
         resource_tags:
           Name: Tools Private Subnet 1A
@@ -185,4 +257,4 @@
            - "{{ tools_private_subnet_id }}"
         routes:
           - dest: "0.0.0.0/0"
-            gateway_id: "{{ nat_gateway_id }}"
+            gateway_id: "{{ nat_gateway_id_1a }}"
