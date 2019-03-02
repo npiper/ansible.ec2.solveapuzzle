@@ -1,0 +1,195 @@
+---
+# AWS tasks are run 'locally'
+
+# Authentication details should be passed in as arguments or exported in the shell before running this playbook
+# Ideally they should be stored in Hashicorp's 'Vault'
+# e.g.
+# export AWS_ACCESS_KEY_ID='my-access-key123'
+# export AWS_SECRET_ACCESS_KEY='sekrit23418'
+#
+# Run with `ansible-playbook -i testing infra.yml`
+
+## Create a VPC - non default
+- name: CREATE AWS ENVIRONMENT
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    instance_type: t2.micro
+    ec2_count: 1
+
+# This playbook sets up an Amazon Container environment
+  tasks:
+  - name: create a new ec2 key pair 'ecs_keypair', returns generated private key
+    ec2_key:
+      name: ecs_keypair
+      region: "{{ aws_region }}"
+      force: false
+    register: ec2_key_result
+
+
+  - name: Save private key in a local safe space
+    copy: content="{{ ec2_key_result.key.private_key }}" dest="./aws.{{ domain_name }}.pem" mode=0400
+    when: ec2_key_result.changed
+
+  # Gather facts about any VPC with a tag key Name and value Example
+  - name: Get matching VPC
+    ec2_vpc_net_facts:
+      region: "{{ aws_region }}"
+      filters:
+        "tag:domain_name": "{{ domain_name }}"
+    register: avpc
+
+  - name: Set VPC ID in variable
+    set_fact:
+       vpc_id: "{{ avpc.vpcs[0].vpc_id }}"
+
+  #  Amazon ECS container agent
+  # Calss to --> Amazon ECS API
+  # Create ECS IAM Role // AmazonEc2ContainerServiceForEC2Role.policy
+  - name: Create ECS API Role
+    iam_role:
+        name: ecs_api_role
+        assume_role_policy_document: "{{ lookup('file','{{ playbook_dir }}/../defaults/AssumeRolePolicy.json') }}"
+        state: present
+        managed_policy:
+          - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
+    register: ecs_api_rolevar
+
+  # Amazon ECS Container agent
+  # calls to EC2, ELB API's
+
+  # Create ECS Service Scheduler IAM Role
+  # Create ECS IAM Role // AmazonEC2ContainerServiceRole.policy
+  - name: Create ECS Service Scheduler Role
+    iam_role:
+        name: ecs_servicescheduler_role
+        assume_role_policy_document: "{{ lookup('file','{{ playbook_dir }}/../defaults/AssumeRolePolicy.json') }}"
+        state: present
+        managed_policy:
+          - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceRole
+    register: ecs_servicescheduler_rolevar
+
+  # Fargate launch type - pull images from ECR or use awslogs driver
+  # Create ECS Task Execution IAM Role
+  - name: Create ECS Task Execution Role
+    iam_role:
+        name: ecs_taskexecution_role
+        assume_role_policy_document: "{{ lookup('file','{{ playbook_dir }}/../defaults/AssumeRolePolicy.json') }}"
+        state: present
+        managed_policy:
+          - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+    register: ecs_taskexecution_rolevar
+
+
+  - name: Find my public ip
+    uri:
+      url: http://ifconfig.me/ip
+      return_content: yes
+    register: ip_response
+
+  # Security Group - firewall for associated container instances
+  # SSH (currentIP/32)
+  # HTTP (0.0.0.0/0)
+  # HTTPS (0.0.0.0/0)
+  - name: Create EC2 Security Group for ECS access
+    ec2_group:
+      name: ecs_secgroup
+      description: ECS Security Group for docker images
+      vpc_id: "{{ vpc_id }}"
+      region: "{{ aws_region }}"
+      rules:
+        - proto: tcp
+          ports:
+          - 22
+          cidr_ip: "{{ ip_response.content }}/32"
+          rule_desc: allow ssh from Port 80 from local IP
+        - proto: tcp
+          ports:
+            - 80
+          cidr_ip: 0.0.0.0/0
+          rule_desc: allows http traffic from internet
+        - proto: tcp
+          ports:
+            - 443
+          cidr_ip: 0.0.0.0/0
+          rule_desc: allows https traffic from internet
+
+  # Pre-Requisites
+
+  # Create ECS Cluster - wait 10 * 10 seconds
+  - name: Wait for register
+    ecs_cluster:
+       name: ecs_cluster
+       region: "{{ aws_region }}"
+       state: present
+       delay: 10
+       repeat: 10
+    register: task_output
+
+
+  # Create ECS Service
+
+  # Get VPC SubnetId's
+  - name: Get Public Subnet list
+    ec2_vpc_subnet_facts:
+      filters:
+        vpc-id: "{{ vpc_id }}"
+        "tag:zone":  "public"
+    register: subnet_facts
+
+  - name: Create subnet id's list variable
+    set_fact:
+      subnet_ids: "{{ subnet_facts.subnets|map(attribute='id')|list }}"
+
+  # Ecs / EC2 Container instance
+  # AMI ID: ami-02a2ea2b210628cc5
+  # t2.micro size
+  # Number of instances
+  ## Spot + OnDemand (1-2)?
+  ##  Auto assign public IP
+  ## Role: ecsInstanceRole
+  ## SecGroup: ecs_secgroup
+  ## Volume: 30GB
+  ## Subnet(s)
+  - name: Launch ECS AMI EC2 instance in public subnet 1a
+    ec2:
+      group: ecs_secgroup
+      instance_type: t2.micro
+      ##  Canonical, Ubuntu, 16.04 LTS, amd64 xenial image build on 2018-05-22
+      image: ami-02a2ea2b210628cc5
+      instance_profile_name: ecs_api_role
+      vpc_subnet_id: "{{ subnet_ids[0] }}"
+      assign_public_ip: yes
+      wait: true
+      region: "{{ aws_region }}"
+      keypair: "ecs_keypair"
+      count: "1"
+      user_data: "#!/bin/bash \necho ECS_CLUSTER=ecs_cluster >> /etc/ecs/ecs.config"
+      instance_tags:
+        type: ecs
+        description: eu-west-1 Amazon ECS-optimized Amazon Linux 2
+    register: ec2-instance-1a
+
+  - name: Launch ECS AMI EC2 instance in public subnet 1c
+    ec2:
+      group: ecs_secgroup
+      instance_type: t2.micro
+      ##  Canonical, Ubuntu, 16.04 LTS, amd64 xenial image build on 2018-05-22
+      image: ami-02a2ea2b210628cc5
+      instance_profile_name: ecs_api_role
+      vpc_subnet_id: "{{ subnet_ids[1] }}"
+      assign_public_ip: yes
+      wait: true
+      region: "{{ aws_region }}"
+      keypair: "ecs_keypair"
+      count: "1"
+      user_data: "#!/bin/bash \necho ECS_CLUSTER=ecs_cluster >> /etc/ecs/ecs.config"
+      instance_tags:
+        type: ecs
+        description: eu-west-1 Amazon ECS-optimized Amazon Linux 2
+    register: ec2-instance-1c
+
+  # Create ECS Taskdefinition
+
+  # Create ECS Task (Run)
