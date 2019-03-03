@@ -1,1 +1,77 @@
+---
+# AWS tasks are run 'locally'
 # https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ECS_CleaningUp.html
+# Authentication details should be passed in as arguments or exported in the shell before running this playbook
+# Ideally they should be stored in Hashicorp's 'Vault'
+# e.g.
+# export AWS_ACCESS_KEY_ID='my-access-key123'
+# export AWS_SECRET_ACCESS_KEY='sekrit23418'
+#
+# Run with `ansible-playbook -i testing infra.yml`
+
+## Create a VPC - non default
+- name: CREATE AWS ENVIRONMENT
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    instance_type: t2.micro
+    ec2_count: 1
+
+  tasks:
+    - name: Find VPC
+      ec2_vpc_net_facts:
+          region: "{{ aws_region }}"
+          filters:
+            "tag:Name": vpc-{{ domain_name }}
+      register: vpc_facts
+
+    - name: Find ec2 instances
+      ec2_instance_facts:
+        region: "{{ aws_region }}"
+        filters:
+          "tag:type": ecs
+      register: ec2s
+
+    - name: Delete EC2 ECS Instances
+      # tag -- type: ecs
+      ec2:
+        state: 'absent'
+        instance_ids: '{{ ec2s.instance_ids }}'
+
+# ecs_cluster
+    - name: Delete cluster
+      ecs_cluster:
+        name: ecs_cluster
+        state: absent
+
+      # ecs_taskexecution_role
+      # ecs_servicescheduler_role
+      # ecs_api_role
+
+    - name: Delete role ecs_taskexecution_role
+      iam_role:
+        name: ecs_taskexecution_role
+        state: absent
+
+    - name: Delete role ecs_servicescheduler_role
+      iam_role:
+        name: ecs_servicescheduler_role
+        state: absent
+
+    - name: Delete role ecs_api_role
+      iam_role:
+        name: ecs_api_role
+        state: absent
+
+      # ecs_secgroup
+    - name: Delete security groups
+      ec2_group:
+        name: ecs_secgroup
+        state: absent
+
+      # ecs_keypair
+    - name: Delete keypair ecs_keypair
+      ec2_key:
+        name: ecs_keypair
+        state: absent

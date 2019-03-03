@@ -6,3 +6,7 @@
 
 # Vagrant stuff
 **/.vagrant
+
+# Keys
+**/*.pem
+**/*.ppk

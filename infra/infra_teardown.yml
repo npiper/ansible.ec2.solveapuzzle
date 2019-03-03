@@ -16,14 +16,38 @@
   gather_facts: False
 
   tasks:
-        - name: Find VPC
+    - name: Find VPC
+      ec2_vpc_net_facts:
+          region: "{{ aws_region }}"
+          filters:
+            "tag:Name": vpc-{{ domain_name }}
+      register: vpc_facts
 
-        - name: Find NAT GATEWAY
+    - name: Find NAT GATEWAY
+      ec2_vpc_nat_gateway_facts:
+        region: "{{ aws_region }}"
+        filters:
+          vpc-id: "{{ vpc_facts.vpcs[0].id}}"
+      register: all_ngws
 
-        - name: Delete NAT Gateway
 
-        - name: Find Elastic IPv4 address
+    - name: Delete NAT Gateway
+      ec2_vpc_nat_gateway:
+        state: absent
+        region: "{{ aws_region }}"
+        wait: yes
+        nat_gateway_id: "{{ item.NatGatewayId }}"
+        release_eip: yes
+      register: delete_nat_gateway_result
+      with_items: "{{ all_ngws.results }}"
 
-        - name: Delete Elastic IPv4 address
+    - name: Find Elastic IPv4 address
 
-        - name: Delete VPC and all resources
+    - name: Delete Elastic IPv4 address
+
+    - name: Delete VPC and all resources
+      ec2_vpc_net:
+        state: absent
+        region: "{{ aws_region }}"
+        purge_cidrs: yes
+        name: vpc-{{ domain_name }}
