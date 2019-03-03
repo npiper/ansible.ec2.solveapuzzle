@@ -36,18 +36,37 @@
         state: absent
         region: "{{ aws_region }}"
         wait: yes
-        nat_gateway_id: "{{ item.NatGatewayId }}"
+        nat_gateway_id: "{{ item.nat_gateway_id }}"
         release_eip: yes
       register: delete_nat_gateway_result
-      with_items: "{{ all_ngws.results }}"
+      with_items: "{{ all_ngws.result }}"
 
     - name: Find Elastic IPv4 address
+      debug:
+        msg: Find Elastic IP's
 
     - name: Delete Elastic IPv4 address
+      debug:
+        msg: Delete Elastic IP's
+
+    - name: Delete IGW ec2_vpc_igw
+      debug:
+        msg: Delete IGW
+
+    - name: Delete subnets ec2_vpc_subnet
+      debug:
+        msg: Delete ec2_vpc_subnet
+
+    - name: Delete route tables ec2_vpc_route_table
+      debug:
+        msg: Delete ec2_vpc_route_table
+
+   # ec2_vpc_subnet, ec2_vpc_igw, and/or ec2_vpc_route_table
 
     - name: Delete VPC and all resources
       ec2_vpc_net:
         state: absent
         region: "{{ aws_region }}"
+        cidr_block: "{{ vpc_facts.vpcs[0].cidr_block }}"
         purge_cidrs: yes
         name: vpc-{{ domain_name }}
