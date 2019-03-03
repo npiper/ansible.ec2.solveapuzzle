@@ -37,12 +37,16 @@
       # tag -- type: ecs
       ec2:
         state: 'absent'
-        instance_ids: '{{ ec2s.instance_ids }}'
+        region: "{{ aws_region }}"
+        instance_ids: "{{ item.instance_id }}"
+        wait: yes
+      with_items: "{{ ec2s.instances }}"
 
 # ecs_cluster
     - name: Delete cluster
       ecs_cluster:
         name: ecs_cluster
+        region: "{{ aws_region }}"
         state: absent
 
       # ecs_taskexecution_role
