@@ -10,3 +10,4 @@
 # Keys
 **/*.pem
 **/*.ppk
+**/aws.dev.neilpiper.me.pem

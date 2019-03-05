@@ -1,0 +1,53 @@
+---
+# AWS tasks are run 'locally'
+
+# Authentication details should be passed in as arguments or exported in the shell before running this playbook
+# Ideally they should be stored in Hashicorp's 'Vault'
+# e.g.
+# export AWS_ACCESS_KEY_ID='my-access-key123'
+# export AWS_SECRET_ACCESS_KEY='sekrit23418'
+#
+# Run with `ansible-playbook -i testing infra.yml`
+
+## Create a VPC - non default
+- name: CREATE AWS ENVIRONMENT
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  #vars:
+    #instance_type: t2.micro
+    #ec2_count: 1
+
+# This playbook sets up an Amazon Container environment
+  tasks:
+  # Gather facts about any VPC with a tag key Name and value Example
+  - name: Get matching VPC
+    ec2_vpc_net_facts:
+      region: "{{ aws_region }}"
+      filters:
+        "tag:domain_name": "{{ domain_name }}"
+    register: avpc
+
+# TaskDefinition
+  - name: Create TaskDefinition
+    ecs_taskdefinition:
+     family: plantuml
+     containers:
+     - name: plantuml
+       essential: true
+       image: "plantuml/plantuml-server:jetty"
+       portMappings:
+       - containerPort: 8080
+         hostPort:      80
+       cpu: 512
+       memory: 500
+     state: present
+
+  - name: Run task
+    ecs_task:
+      operation: run
+      cluster: ecs_cluster
+      task_definition: plantuml
+      count: 1
+      started_by: ansible_user
+    register: task_output

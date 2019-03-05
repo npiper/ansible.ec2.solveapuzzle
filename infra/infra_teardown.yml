@@ -23,6 +23,8 @@
             "tag:Name": vpc-{{ domain_name }}
       register: vpc_facts
 
+## Delete NAT Gateways
+
     - name: Find NAT GATEWAY
       ec2_vpc_nat_gateway_facts:
         region: "{{ aws_region }}"
@@ -41,25 +43,51 @@
       register: delete_nat_gateway_result
       with_items: "{{ all_ngws.result }}"
 
-    - name: Find Elastic IPv4 address
-      debug:
-        msg: Find Elastic IP's
 
-    - name: Delete Elastic IPv4 address
-      debug:
-        msg: Delete Elastic IP's
 
-    - name: Delete IGW ec2_vpc_igw
-      debug:
-        msg: Delete IGW
+## Delete Route tables
 
-    - name: Delete subnets ec2_vpc_subnet
-      debug:
-        msg: Delete ec2_vpc_subnet
+    - name: Find route tables in VPC
+      ec2_vpc_route_table_facts:
+       region: "{{ aws_region }}"
+       filters:
+          vpc-id: "{{ vpc_facts.vpcs[0].id }}"
+          association.main: false
+
+      register: route_table_facts
 
     - name: Delete route tables ec2_vpc_route_table
-      debug:
-        msg: Delete ec2_vpc_route_table
+      ec2_vpc_route_table:
+        region: "{{ aws_region }}"
+        state: absent
+        vpc_id: "{{ vpc_facts.vpcs[0].id }}"
+        lookup: id
+        route_table_id: "{{ item.id }}"
+      with_items: "{{ route_table_facts.route_tables }}"
+
+## Delete IGW
+
+    - name: Delete IGW ec2_vpc_igw
+      ec2_vpc_igw:
+        vpc_id: "{{ vpc_facts.vpcs[0].id }}"
+        region: "{{ aws_region  }}"
+        state: absent
+
+## Delete Subnets
+
+    - name: Get all subnets for VPC
+      ec2_vpc_subnet_facts:
+        filters:
+          vpc-id: "{{ vpc_facts.vpcs[0].id }}"
+      register: subnet_facts
+
+    - name: Delete subnets ec2_vpc_subnet
+      ec2_vpc_subnet:
+        state: absent
+        vpc_id: "{{ vpc_facts.vpcs[0].id }}"
+        region: "{{ aws_region }}"
+        cidr: "{{ item.cidr_block}}"
+      with_items: "{{ subnet_facts.subnets }}"
 
    # ec2_vpc_subnet, ec2_vpc_igw, and/or ec2_vpc_route_table
 
