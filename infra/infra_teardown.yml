@@ -70,13 +70,14 @@
     - name: Delete IGW ec2_vpc_igw
       ec2_vpc_igw:
         vpc_id: "{{ vpc_facts.vpcs[0].id }}"
-        region: "{{ aws_region  }}"
+        region: "{{ aws_region }}"
         state: absent
 
 ## Delete Subnets
 
     - name: Get all subnets for VPC
       ec2_vpc_subnet_facts:
+        region: "{{ aws_region }}"
         filters:
           vpc-id: "{{ vpc_facts.vpcs[0].id }}"
       register: subnet_facts

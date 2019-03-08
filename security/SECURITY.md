@@ -38,6 +38,7 @@ ansible-playbook -vvv -i ../testing security.yml
  * Security monitoring & intrusion detection
  * Transaction signingls
 
+
 ## Key management
 
 https://docs.aws.amazon.com/kms/latest/developerguide/overview.html
@@ -81,6 +82,24 @@ Grants to access role:
 
 Monitoring / detection
 MFA / Auth tokens
+
+## Identity and Access management
+
+ * Directory Service(s) - HA
+ * Cloud Identity and access management
+ * Mobile Identity and access management
+ * Internal / Domain / Staff - I&AM
+ * Password reset
+ * MFA
+ * Role / Applicaiton mappings
+ * Role based access control
+ * Authentication - (SAML, JWT, OpenIDconnect)
+ * Federated Identity management (Partners, Public)
+ * API's for RBAC Workflows (Joiner, Leaver,..)
+ * Mailing lists
+ * Groups
+
+https://aws.amazon.com/blogs/security/how-to-configure-an-ldaps-endpoint-for-simple-ad/
 
 # Scenarios
 
