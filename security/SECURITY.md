@@ -36,7 +36,7 @@ ansible-playbook -vvv -i ../testing security.yml
  * Key / Token management
  * Secret management
  * Security monitoring & intrusion detection
- * Transaction signingls
+ * Transaction signing
 
 
 ## Key management
@@ -89,7 +89,7 @@ MFA / Auth tokens
  * Cloud Identity and access management
  * Mobile Identity and access management
  * Internal / Domain / Staff - I&AM
- * Password reset
+ * Password reset, Hints
  * MFA
  * Role / Applicaiton mappings
  * Role based access control
@@ -98,6 +98,7 @@ MFA / Auth tokens
  * API's for RBAC Workflows (Joiner, Leaver,..)
  * Mailing lists
  * Groups
+ * LDAP Authentication
 
 https://aws.amazon.com/blogs/security/how-to-configure-an-ldaps-endpoint-for-simple-ad/
 
