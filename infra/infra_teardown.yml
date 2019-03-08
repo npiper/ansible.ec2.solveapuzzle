@@ -52,7 +52,8 @@
        region: "{{ aws_region }}"
        filters:
           vpc-id: "{{ vpc_facts.vpcs[0].id }}"
-          association.main: false
+          "tag:context": "{{ context }}"
+          #association.main: "false"
 
       register: route_table_facts
 
