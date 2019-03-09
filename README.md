@@ -1,5 +1,24 @@
 # ansible aws
 
+# Introduction
+
+This is a project for setting up AWS infrastructure for the purposes of:
+
+ * Learning and Experimentation
+ * An example on setting up a 'Platform Organisation' in AWS
+ * Automated setup / tear down
+
+# Constraints
+
+ * Money! - do it cheap
+
+# Context and Scope
+
+Objective is to create a set of self-contained service domains using AWS features as a hosting framework.
+
+![domain](devops/domainModel.svg)
+
+
 ## Pre-Requisites
 
  * AWS account - your Aws access key id, secret (Set up as env variables)
@@ -10,13 +29,11 @@
 
 ![Deploy diagram](devops/devops.svg)
 
+## Netork and Infrastructure Domain
+
 ### Initial VPC and Networking
 
 [Infrastructure Instructions](infra/README.md)
-
-### Devops
-
-[DevOps instructions](devops/README.md)
 
 
 ## Vagrant
