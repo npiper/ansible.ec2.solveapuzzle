@@ -20,7 +20,8 @@ The default region is `eu-west-1` (Ireland).  This value can be overwritten in v
 
 ## Diagram
 
-![Deploy](../inventory/DeploymentDiagram.svg)
+![Deploy](./docs/DeploymentDiagram.svg)
+
 
 ## Order of Construction
 
