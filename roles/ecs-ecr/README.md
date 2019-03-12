@@ -88,6 +88,37 @@ After you have registered a task for your account and have launched a container 
 
 https://docs.ansible.com/ansible/2.5/modules/ecs_task_module.html
 
+# CI-CD ECS Deploy pipeline
+
+For containers to be deployed into our cluster we will set up pipelines so they can deploy into it.
+
+## Build Job Inputs
+
+ * User, Access Keys, Secrets
+ * AWS Region
+ * ecs_cluster name 'ecs_cluster'
+ * ecs service name
+
+## Pseudo-Code
+
+ * `build` build and unit test
+ * `package` Package docker candidate build with build#
+ * `deploy` ecs-deploy service based on new build
+
+## Container build sets
+
+Possible containers to hook into build pipeline
+
+ * npiper/certbot-nginx (tags)
+ * npiper/community.test (no tags yet)
+
+
+
+http://haoliangyu.github.io/blog/2018/03/19/AWS-ECS-auto-deployment-with-Travis-CI/
+
+https://github.com/silinternational/ecs-deploy
+
+https://github.com/TetraTutorials/amazonecs_tutorial
 
 ## Role guide_aws
 
