@@ -1,6 +1,6 @@
 # Amazon ECS / ecr
 
-![Deploy](AWS-Docker.png)
+![Deploy](./docs/ecs-ecr.svg)
 
 Setting up
 https://docs.aws.amazon.com/AmazonECS/latest/developerguide/get-set-up-for-amazon-ecs.html
