@@ -42,6 +42,19 @@
        cpu: 512
        memory: 500
      state: present
+    register: plant_taskdef
+
+  - name: create ECS service on VPC network
+    ecs_service:
+      state: present
+      name: plantuml-service
+      cluster: ecs_cluster
+      region: "{{ aws_region }}"
+      delay: 10
+      task_definition: 'plantuml:{{ plant_taskdef.taskdefinition.revision }}'
+      desired_count: 2
+      launch_type: EC2
+
 
   - name: Run task
     ecs_task:
