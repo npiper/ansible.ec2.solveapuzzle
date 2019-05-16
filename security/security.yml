@@ -30,7 +30,7 @@
       set_fact:
           vpc_id: "{{ vpc_facts.vpcs[0].id }}"
 
-    - name: Create private security subnet in VPC 10.0.8.0
+    - name: Create private security subnet A in VPC 10.0.8.0
       ec2_vpc_subnet:
             vpc_id: "{{ vpc_id }}"
             region: "{{ aws_region }}"
@@ -45,9 +45,72 @@
             state: present
       register: sec_subnet_1a
 
-    - name: Set Security Private Subnet ID in variable
+    - name: Set Security Private Subnet ID A in variable
       set_fact:
-         sec_private_subnet_id: "{{ sec_subnet_1a.subnet.id }}"
+         sec_private_subnet_id_a: "{{ sec_subnet_1a.subnet.id }}"
+
+    - name: Create private security subnet C in VPC 10.0.9.0
+      ec2_vpc_subnet:
+            vpc_id: "{{ vpc_id }}"
+            region: "{{ aws_region }}"
+            cidr: 10.0.9.0/28
+            az: "{{ aws_region }}c"
+            resource_tags:
+              Name: Security Domain Private Subnet 1C
+              zone: private
+              context: "{{ context }}"
+              threat: high
+              domain: security
+            state: present
+      register: sec_subnet_1c
+
+
+    - name: Set Security Private Subnet ID C in variable
+      set_fact:
+         sec_private_subnet_id_c: "{{ sec_subnet_1c.subnet.id }}"
+
+
+## Public Subnets
+
+    - name: Create public security subnet A in VPC 10.0.10.0
+      ec2_vpc_subnet:
+            vpc_id: "{{ vpc_id }}"
+            region: "{{ aws_region }}"
+            cidr: 10.0.10.0/28
+            az: "{{ aws_region }}a"
+            resource_tags:
+              Name: Security Domain Private Subnet 1A
+              zone: public
+              context: "{{ context }}"
+              threat: high
+              domain: security
+            state: present
+      register: pubsec_subnet_1a
+
+    - name: Set Security Public Subnet ID A in variable
+      set_fact:
+         sec_public_subnet_id_a: "{{ pubsec_subnet_1a.subnet.id }}"
+
+    - name: Create public security subnet C in VPC 10.0.11.0
+      ec2_vpc_subnet:
+            vpc_id: "{{ vpc_id }}"
+            region: "{{ aws_region }}"
+            cidr: 10.0.11.0/28
+            az: "{{ aws_region }}c"
+            resource_tags:
+              Name: Security Domain Public Subnet 1C
+              zone: public
+              context: "{{ context }}"
+              threat: high
+              domain: security
+            state: present
+      register: pubsec_subnet_1c
+
+
+    - name: Set Security Public Subnet ID C in variable
+      set_fact:
+         sec_public_subnet_id_c: "{{ pubsec_subnet_1c.subnet.id }}"
+
 
     # A security group that exposes admin ports of Security services
     - name: Create admin sec Group

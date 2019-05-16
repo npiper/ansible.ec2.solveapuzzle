@@ -1,7 +1,27 @@
 [all:vars]
 aws_region="eu-west-1"
+# Default Subnet size - CIDR block - 7 bits, 64 IP's per subnet
+default_cidr_range=25
+# CIDR Prefix - gives up to 256 Subnets, max 200 in an AWS VPC
+cidr_prefix=10.0.
+# When creating HA, default availability zones to use in the region
+availability_zones=['a','c']
 
+# Problem - hardcoding subnet numbers, knowing order
+# Pool of subnets within Ranges
+# Domains may choose different configurations across AZ's , public/private/hybrid subnets
+# On subnet creation go to the pool, use the default Ranges (10.0.X[0-199].0)/default_cidr_range
+# Tag appropriately and it should be possible to query?
+# Find highest possible number & increment?
+# Always Tag
+# DNS type approach for Subnet registration under domain?
+# Ansible subnet logic / function - https://docs.ansible.com/ansible/latest/user_guide/playbooks_filters_ipaddr.html#basic-queries
 
+## Query VPC subnets
+### For highest ranking subnet ($cidr_prefix.[X].$default_cidr_range)  ( < 199)
+### Increment $subnet count + 1
+### Create subnet
+### Max ip's == 65536
 
 ## For local testing
 localhost ansible_connection=local

@@ -2,6 +2,24 @@
 
 ![Deploy](./docs/ecs-ecr.svg)
 
+
+# ansible
+
+Run and setup the base [infra scripts](../../infra/README.md) first so you have your VPC and all networking ready.
+
+```
+cd ./roles/ecs-ecr/tasks
+
+# Set up ECS EC2 Instances
+ansible-playbook -vvv -i ../../../testing install-ecs.yml
+
+# install and start Docker tasks on ECS (Plantuml docker)
+ansible-playbook -vvv -i ../../../testing docker-tasks.yml
+
+# Tear down
+
+```
+
 Setting up
 https://docs.aws.amazon.com/AmazonECS/latest/developerguide/get-set-up-for-amazon-ecs.html
 

@@ -42,6 +42,13 @@
         wait: yes
       with_items: "{{ ec2s.instances }}"
 
+# Delete services 'The Cluster cannot be deleted while Services are active'
+    - ecs_service:
+        name: plantuml-service
+        state: absent
+        cluster: ecs_cluster
+
+
 # ecs_cluster
     - name: Delete cluster
       ecs_cluster:
