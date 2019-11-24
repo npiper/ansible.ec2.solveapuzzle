@@ -24,6 +24,19 @@ Objective is to create a set of self-contained service domains using AWS feature
  * AWS account - your Aws access key id, secret (Set up as env variables)
  * Ansible installed on the environment - tested at v2.7+ on MacOS
 
+## QUICKSTART !
+
+```
+cd infra
+// Create a VPC with Public, Private subnets
+ansible-playbook -vvv -i ../testing infra.yml
+
+// ECS instances
+
+
+```
+
+
 
 ## Deployment overview
 
