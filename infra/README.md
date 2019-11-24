@@ -90,6 +90,8 @@ ansible-playbook -vvv -i ../testing infra_teardown.yml
 
 [LinuxSchool - Build and manage EC2 images with ansible](https://www.linuxschoolonline.com/use-ansible-to-build-and-manage-aws-ec2-instances/)
 
+[AWS Ansible dynamic IP](https://aws.amazon.com/blogs/apn/getting-started-with-ansible-and-dynamic-amazon-ec2-inventory-management/)
+
 ### Ansible commands
 
 * [Create VPC: ec2_vpc_net](https://docs.ansible.com/ansible/latest/modules/ec2_vpc_net_module.html)

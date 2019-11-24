@@ -199,6 +199,79 @@ Role: SecurityDomainAdmin
 Role: SecurityDomainDev
 Role: SecurityDomainBuild
 
+## Directory service Pre-Requisites
+
+Simple AD
+
+At least two subnets. For Simple AD to install correctly, you must install your two domain controllers in separate subnets that must be in a different Availability Zone.
+
+[AWS DS Policy sets](https://docs.aws.amazon.com/directoryservice/latest/admin-guide/UsingWithDS_IAM_ResourcePermissions.html)
+
+subnets must be in the same Classless Inter-Domain Routing (CIDR) range
+
+The following encryption types must be enabled in the directory:
+
+RC4_HMAC_MD5
+
+AES128_HMAC_SHA1
+
+AES256_HMAC_SHA1
+
+Future encryption types
+
+[Configure DNS](https://docs.aws.amazon.com/directoryservice/latest/admin-guide/simple_ad_dns.html)
+
+Simple AD forwards DNS requests to Amazon-provided DNS servers for your VPC. These DNS servers will resolve names configured in your Route 53 private hosted zones.
+
+T o enable your Simple AD to respond to external DNS queries, the network access control list (ACL) for the VPC containing your Simple AD must be configured to allow traffic from outside the VPC.
+
+If you are not using Route 53 private hosted zones, your DNS requests will be forwarded to public DNS servers.
+
+https://docs.aws.amazon.com/cli/latest/reference/ds/index.html
+
+### No AWS Ansible Module for AWS DS
+
+[Ansible with AWS CLI](https://medium.com/energetiq/ansible-and-the-aws-cli-no-module-no-problem-27580d36ef2d)
+
+### Ports / Sec Group Config
+
+TCP/UDP 53 - DNS
+
+TCP/UDP 88 - Kerberos authentication
+
+UDP 123 - NTP
+
+TCP 135 - RPC
+
+UDP 137-138 - Netlogon
+
+TCP 139 - Netlogon
+
+TCP/UDP 389 - LDAP
+
+TCP/UDP 445 - SMB
+
+TCP 636 - LDAPS (LDAP over TLS/SSL)
+
+TCP/UDP 464 - Kerberos password change/set
+
+TCP 873 - Rsync
+
+TCP 3268 - Global Catalog
+
+TCP 3269 - Global Catalog SSL
+
+TCP/UDP 1024-65535 - Ephemeral ports for RPC
+
+# Passwords
+
+Setting up security assets will require some initial Passwords
+
+An encryption solution is required that makes it safe in Github / Config management.
+
+https://docs.ansible.com/ansible/latest/user_guide/playbooks_vault.html
+
+
 
 ## References
 
@@ -220,3 +293,5 @@ https://ietf-wg-acme.github.io/acme/draft-ietf-acme-acme.html
 [AWS- Bastion hosts](https://aws.amazon.com/quickstart/architecture/linux-bastion/)
 
 [docker openldap](https://github.com/osixia/docker-openldap)
+
+[AWS OpenLDAP](https://www.itskarma.wtf/openldap-on-ec2/)

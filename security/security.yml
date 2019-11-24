@@ -175,9 +175,39 @@
           - arn:aws:iam::aws:policy/IAMUserSSHKeys
         #description: Security domain Administrator role
 
+
+## Directory service
+### 2 separate subnets that must be in a different Availability Zone
+### must be in the same Classless Inter-Domain Routing (CIDR) range
+### Ports
+
+ # Needed for idempotency
+ - name: look for an existing Directory service using the AWS CLI
+  command: >
+        aws ds describe-directories
+          --directory-ids {{  }}
+          --region {{ aws_region }}
+      changed_when: false
+      register: aws_ds_cluster_query
+
+ - name: parse the response and check if our Directory is there
+      set_fact:
+        aws_ds_exists: "{{ aws_ds_cluster_query.stdout | from_json | json_query('DBClusters[0]')}}"
+
+ - name: create AWS Simple Directory service with the AWS CLI
+   command: >
+      aws ds create-directory --region {{ aws_region }} --name <value> --size small --VpcId={{ vpc_id }},SubnetIds={{ sec_public_subnet_id_a }},{{ sec_public_subnet_id_c }}
+   when: aws_ds_exists == '' # json_query returns an empty string if it doesn't resolve right, nice
+
+   # A Linux bastion host in each public subnet with an Elastic IP address to allow inbound Secure Shell (SSH)
+   # access to EC2 instances in public and private subnets
+
+
+
     - name: Create VPN subnet
       debug:
         msg: "TO DO: Create A VPN subnet"
+
 
     - name: Create Virtual private gateway
       debug:

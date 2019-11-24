@@ -1,0 +1,14 @@
+{
+    "Name": "",
+    "ShortName": "",
+    "Password": "",
+    "Description": "",
+    "Size": "Small",
+    "VpcSettings": {
+        "VpcId": "",
+        "SubnetIds": [
+            ""
+        ]
+    }
+
+}
