@@ -91,9 +91,16 @@ Inputs:
  * SecurityGroup
 
 AMI:
-eu-west-1	ami-c91624b0
+eu-west-1	ami-0bf45a5f4ab05b949
 
+Where to get latest AMI ID:
+https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-optimized_AMI.html
+
+Configuration:
 https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-agent-config.html
+
+## Go to NEXT scripts - docker-tasks.yml
+
 
 ### Step 5: Register a Task Definition
 
@@ -129,6 +136,8 @@ Possible containers to hook into build pipeline
 
  * npiper/certbot-nginx (tags)
  * npiper/community.test (no tags yet)
+ * npiper/archdiagrams
+ * npiper/rest-reference
 
 
 
