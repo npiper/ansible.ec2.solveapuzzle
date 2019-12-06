@@ -15,7 +15,7 @@
   connection: local
   gather_facts: False
   vars:
-    instance_type: t2.micro
+    instance_type: t2.medium
     ec2_count: 1
 
 # This playbook sets up an Amazon Container environment
@@ -155,7 +155,7 @@
   - name: Launch ECS AMI EC2 instance in public subnet 1a
     ec2:
       group: ecs_secgroup
-      instance_type: t2.micro
+      instance_type: "{{ instance_type }}"
       ##  Canonical, Ubuntu, 16.04 LTS, amd64 xenial image build on 2018-05-22
       image: ami-0bf45a5f4ab05b949
       instance_profile_name: ecs_api_role
@@ -174,7 +174,7 @@
   - name: Launch ECS AMI EC2 instance in public subnet 1c
     ec2:
       group: ecs_secgroup
-      instance_type: t2.micro
+      instance_type: "{{ instance_type }}"
       ##  Canonical, Ubuntu, 16.04 LTS, amd64 xenial image build on 2018-05-22
       image: ami-0bf45a5f4ab05b949
       instance_profile_name: ecs_api_role

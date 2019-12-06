@@ -123,6 +123,7 @@ For containers to be deployed into our cluster we will set up pipelines so they 
  * AWS Region
  * ecs_cluster name 'ecs_cluster'
  * ecs service name
+ * [AMI's for the EC2 / ECS](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-optimized_AMI.html)
 
 ## Pseudo-Code
 
@@ -139,13 +140,15 @@ Possible containers to hook into build pipeline
  * npiper/archdiagrams
  * npiper/rest-reference
 
-
+# Refs - Deployment
 
 http://haoliangyu.github.io/blog/2018/03/19/AWS-ECS-auto-deployment-with-Travis-CI/
 
 https://github.com/silinternational/ecs-deploy
 
 https://github.com/TetraTutorials/amazonecs_tutorial
+
+[Sending Docker logs to Cloudwatch logs](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_cloudwatch_logs.html)
 
 ## Role guide_aws
 
