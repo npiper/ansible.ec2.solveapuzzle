@@ -1,0 +1,84 @@
+---
+# AWS tasks are run 'locally'
+
+# Authentication details should be passed in as arguments or exported in the shell before running this playbook
+# Ideally they should be stored in Hashicorp's 'Vault'
+# e.g.
+# export AWS_ACCESS_KEY_ID='my-access-key123'
+# export AWS_SECRET_ACCESS_KEY='sekrit23418'
+#
+# Run with `ansible-playbook -i testing infra.yml`
+
+## Create a VPC - non default
+- name: Create VPN Environment
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    instance_type: t2.medium
+    ec2_count: 1
+
+# This playbook sets up an Amazon Container environment
+  tasks:
+  - name: create a new ec2 key pair 'vpn_keypair', returns generated private key
+    ec2_key:
+      name: vpn_keypair
+      region: "{{ aws_region }}"
+      force: false
+    register: vpn_key_result
+
+
+  - name: Save private key in a local safe space
+    copy: content="{{ vpn_key_result.key.private_key }}" dest="./aws.vpn.{{ domain_name }}.pem" mode=0400
+    when: vpn_key_result.changed
+
+  # Gather facts about any VPC with a tag key Name and value Example
+  - name: Get matching VPC
+    ec2_vpc_net_facts:
+      region: "{{ aws_region }}"
+      filters:
+        "tag:domain_name": "{{ domain_name }}"
+    register: avpc
+
+  - name: Set VPC ID in variable
+    set_fact:
+       vpc_id: "{{ avpc.vpcs[0].vpc_id }}"
+
+  - name: Find my public ip
+    uri:
+      url: http://ifconfig.me/ip
+      return_content: yes
+    register: ip_response
+
+  # Get VPC SubnetId's
+  - name: Get Public Subnet list
+    ec2_vpc_subnet_facts:
+      filters:
+        vpc-id: "{{ vpc_id }}"
+        "tag:zone":  "public"
+    register: subnet_facts
+
+
+  - name: Create subnet id's list variable
+    set_fact:
+      subnet_ids: "{{ subnet_facts.subnets|map(attribute='id')|list }}"
+
+  - name: Launch ECS AMI EC2 instance in public subnet 1a
+    ec2:
+      group: ecs_secgroup
+      instance_type: "{{ instance_type }}"
+      ##  AMI Debian/Stretch based on Docker IPSec, VPN server - https://github.com/hwdsl2/docker-ipsec-vpn-server
+      ## Libreswan - AMI is in my account
+      image: ami-0d7b92e0dcdd8c7f9
+      instance_profile_name: ecs_api_role
+      vpc_subnet_id: "{{ subnet_ids[0] }}"
+      assign_public_ip: yes
+      wait: true
+      region: "{{ aws_region }}"
+      keypair: "vpn_keypair"
+      count: "1"
+      user_data: "#!/bin/bash \necho ECS_CLUSTER=ecs_cluster >> /etc/ecs/ecs.config"
+      instance_tags:
+        type: vpn
+        description: eu-west-1 Amazon ECS-optimized Amazon Linux 2
+    register: ec2_vpn_instance_1a

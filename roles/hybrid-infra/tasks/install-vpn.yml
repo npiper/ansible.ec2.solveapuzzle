@@ -1,0 +1,153 @@
+---
+# AWS tasks are run 'locally'
+
+# Authentication details should be passed in as arguments or exported in the shell before running this playbook
+# Ideally they should be stored in Hashicorp's 'Vault'
+# e.g.
+# export AWS_ACCESS_KEY_ID='my-access-key123'
+# export AWS_SECRET_ACCESS_KEY='sekrit23418'
+#
+# Run with `ansible-playbook -i testing infra.yml`
+
+## Create a VPC - non default
+- name: CREATE AWS ENVIRONMENT
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    instance_type: t2.medium
+    ec2_count: 1
+    pwd_alias: "{{ lookup('password', '/dev/null length=128 chars=ascii_letters,digits,hexdigits,punctuation') }}"
+
+
+# This playbook sets up an Amazon VPN environment
+  tasks:
+  - name: create a new ec2 key pair 'vpn_keypair', returns generated private key
+    ec2_key:
+      name: vpn_keypair
+      region: "{{ aws_region }}"
+      force: false
+    register: vpn_key_result
+
+  - name: Save private vpn key in a local safe space
+    copy: content="{{ vpn_key_result.key.private_key }}" dest="./aws.vpn.{{ domain_name }}.pem" mode=0400
+    when: vpn_key_result.changed
+
+
+  - name: Generate an OpenSSL Private Key IPSEC Pre-Shared Key
+    debug:
+      msg: "Pre-shared key is {{ pwd_alias }}"
+
+  # Gather facts about any VPC with a tag key Name and value Example
+  - name: Get matching VPC
+    ec2_vpc_net_facts:
+      region: "{{ aws_region }}"
+      filters:
+        "tag:domain_name": "{{ domain_name }}"
+    register: avpc
+
+  - name: Set VPC ID in variable
+    set_fact:
+       vpc_id: "{{ avpc.vpcs[0].vpc_id }}"
+
+  - name: Find my public ip
+    uri:
+      url: http://ifconfig.me/ip
+      return_content: yes
+    register: ip_response
+
+  - name: Create customer gateway using IP
+    ec2_customer_gateway:
+      ip_address: "{{ ip_response }}"
+      name: NeilHome
+      bgp_asn: 65000
+      region: "{{ aws_region }}"
+      state: present
+    register: cgw
+
+
+
+  # Create ECS Service
+
+  # Get VPC SubnetId's
+  - name: Get Public Subnet list
+    ec2_vpc_subnet_facts:
+      filters:
+        vpc-id: "{{ vpc_id }}"
+        "tag:zone":  "public"
+    register: subnet_facts
+
+  - name: Create subnet id's list variable
+    set_fact:
+      subnet_ids: "{{ subnet_facts.subnets|map(attribute='id')|list }}"
+
+  - name: Create VPN Security Group
+    ec2_group:
+      name: vpn-ipsec-secgroup
+      description: VPN Security Group
+      vpc_id: "{{ vpc_id }}"
+      rules:
+      - proto: tcp
+        from_port: 22
+        to_port: 22
+        cidr_ip: "{{ ip_response.content }}/32"
+      - proto: udp
+        from_port: 4500
+        to_port: 4500
+        cidr_ip: "{{ ip_response.content }}/32"
+      - proto: udp
+        from_port: 500
+        to_port: 500
+        cidr_ip: "{{ ip_response.content }}/32"
+
+
+  # Ecs / EC2 Container instance
+  # AMI ID: ami-02a2ea2b210628cc5
+  # t2.micro size
+  # Number of instances
+  ## Spot + OnDemand (1-2)?
+  ##  Auto assign public IP
+  ## Role: ecsInstanceRole
+  ## SecGroup: ecs_secgroup
+  ## Volume: 30GB
+  ## Subnet(s)
+  - name: Launch ECS AMI EC2 instance in public subnet 1a
+    ec2:
+      group: vpn-ipsec-secgroup
+      instance_type: "{{ instance_type }}"
+      ##  Canonical, Ubuntu, 16.04 LTS, amd64 xenial image build on 2018-05-22
+      image: ami-07cd0d3b7336a9564
+      vpc_subnet_id: "{{ subnet_ids[0] }}"
+      assign_public_ip: yes
+      wait: true
+      region: "{{ aws_region }}"
+      keypair: "vpn_keypair"
+      count: "1"
+      # mkdir -p /run/pluto /var/run/pluto /var/run/xl2tpd\nrm -f /run/pluto/pluto.pid /var/run/pluto/pluto.pid /var/run/xl2tpd.pid\n/usr/local/sbin/ipsec start\nexec /usr/sbin/xl2tpd -D -c /etc/xl2tpd/xl2tpd.conf
+      user_data: "#!/bin/bash \n/opt/src/run.sh"
+      instance_tags:
+        type: vpn
+        description: eu-west-1 Amazon ECS-optimized Amazon Linux 2
+    register: ec2_vpn_instance_1a
+
+  - name: Launch ECS AMI EC2 instance in public subnet 1c
+    ec2:
+      group: vpn-ipsec-secgroup
+      instance_type: "{{ instance_type }}"
+      ##  Debian Gnu Linux 9 Stretch with Libreswan VPN
+      image: ami-07cd0d3b7336a9564
+      vpc_subnet_id: "{{ subnet_ids[1] }}"
+      assign_public_ip: yes
+      wait: true
+      region: "{{ aws_region }}"
+      keypair: "vpn_keypair"
+      count: "1"
+      user_data: "#!/bin/bash \n/opt/src/run.sh"
+      instance_tags:
+        type: vpn
+        description: eu-west-1 Amazon ECS-optimized Amazon Linux 2
+    register: ec2_vpn_instance_1c
+
+  # Create ECS Taskdefinition
+
+  # Create ECS Task (Run)
