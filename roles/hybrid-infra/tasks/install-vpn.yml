@@ -17,7 +17,7 @@
   vars:
     instance_type: t2.medium
     ec2_count: 1
-    pwd_alias: "{{ lookup('password', '/dev/null length=128 chars=ascii_letters,digits,hexdigits,punctuation') }}"
+    pwd_alias: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
 
 
 # This playbook sets up an Amazon VPN environment
@@ -56,14 +56,7 @@
       return_content: yes
     register: ip_response
 
-  - name: Create customer gateway using IP
-    ec2_customer_gateway:
-      ip_address: "{{ ip_response }}"
-      name: NeilHome
-      bgp_asn: 65000
-      region: "{{ aws_region }}"
-      state: present
-    register: cgw
+
 
 
 
@@ -122,7 +115,9 @@
       wait: true
       region: "{{ aws_region }}"
       keypair: "vpn_keypair"
-      count: "1"
+      count_tag:
+        type: vpn
+      exact_count: 2
       # mkdir -p /run/pluto /var/run/pluto /var/run/xl2tpd\nrm -f /run/pluto/pluto.pid /var/run/pluto/pluto.pid /var/run/xl2tpd.pid\n/usr/local/sbin/ipsec start\nexec /usr/sbin/xl2tpd -D -c /etc/xl2tpd/xl2tpd.conf
       user_data: "#!/bin/bash \n/opt/src/run.sh"
       instance_tags:
@@ -141,13 +136,52 @@
       wait: true
       region: "{{ aws_region }}"
       keypair: "vpn_keypair"
-      count: "1"
+      count_tag:
+        type: vpn
+      exact_count: 2
       user_data: "#!/bin/bash \n/opt/src/run.sh"
       instance_tags:
         type: vpn
         description: eu-west-1 Amazon ECS-optimized Amazon Linux 2
     register: ec2_vpn_instance_1c
 
-  # Create ECS Taskdefinition
+  # Create AWS to Client VPN connection
+  - name: Create a new Virtual Private Gateway attached to our VPC
+    ec2_vpc_vgw:
+      state: present
+      region: "{{ aws_region }}"
+      vpc_id: "{{ vpc_id }}"
+      name: "vpc-vgw-{{ domain_name }}"
+      type: ipsec.1
+    register: created_vgw
 
-  # Create ECS Task (Run)
+  - name: Create customer gateway using IP - Account level
+    ec2_customer_gateway:
+      ip_address: "{{ ip_response }}"
+      name: NeilHome
+      routing: static
+      bgp_asn: 65000
+      region: "{{ aws_region }}"
+      state: present
+    register: customer_gw
+
+
+  - name: create a VPN connection
+    ec2_vpc_vpn:
+      state: present
+      vpn_gateway_id: "{{ created_vgw.vgw.id }}"
+      customer_gateway_id: "{{ customer_gw.gateway.customer_gateways[0].customer_gateway_id }}"
+      static_only: yes
+      tunnel_options:
+        -
+          PreSharedKey: "{{ pwd_alias }}"
+        -
+          PreSharedKey: "{{ pwd_alias }}"
+      routes:
+        - 92.238.125.122/32
+        - 192.168.0.0/24
+
+  # Configure our Local VPN Server - IPSec
+  # options.tunnel_options[X].outside_ip_address
+  # options.tunnel_options[X].pre_shared_key
+  # vpc_id.vpc[0].cidr_block

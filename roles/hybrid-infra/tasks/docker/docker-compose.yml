@@ -1,31 +1,9 @@
 version: '3'
 
 services:
-  vpn-client:
-    image: dperson/openvpn-client
-        # cap_add, security_opt, and volume required for the image to function
-    cap_add:
-      - net_admin
-    environment:
-      TZ: 'EST5EDT'
-    networks:
-      - default
-    read_only: true
-    tmpfs:
-      - /run
-      - /tmp
-    restart: unless-stopped
-    security_opt:
-      - label:disable
-    stdin_open: true
-    tty: true
-    volumes:
-      - /dev/net:/dev/net:z    
-    
-     
   vpn:
     image: hwdsl2/ipsec-vpn-server
-    restart: unless-stopped 
+    restart: always
     env_file:
       - ./vpn.env
     ports:
@@ -34,7 +12,3 @@ services:
     privileged: true
     hostname: ipsec-vpn-server
     container_name: ipsec-vpn-server
-
-
-networks:
-  default:

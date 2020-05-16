@@ -31,12 +31,16 @@ Using playbook `./infra/infra.yml`
 
 ## Type 1 - Site to Site VPN
 
-https://docs.aws.amazon.com/vpn/latest/s2svpn/VPC_VPN.html
+You can enable access to your remote network from your VPC by creating an AWS Site-to-Site VPN (Site-to-Site VPN) connection, and configuring routing to pass traffic through the connection.
+
+IPv6 traffic is not supported
+
+[AWS: What is AWS Site-to-Site VPN?](https://docs.aws.amazon.com/vpn/latest/s2svpn/VPC_VPN.html)
 
 ```
-VPC Public Subnet:  10.0.0.0/28
+VPC Public Subnet:  1a 10.0.0.0/28    1c 10.0.3.0/28
 
-Internet Gateway
+Via Internet Gateway
 
 On-Prem: 192.168.0.0/24 (Via: 92.238.125.122)
 
@@ -44,7 +48,7 @@ On-Prem: 192.168.0.0/24 (Via: 92.238.125.122)
 
 # Software vPN
 
-# Docker IPSec VPN Server on
+## Docker IPSec VPN Server on EC2 (HA)
 
 I created an Amazon AMI based on the Docker project below.
 It is Libreswan VPN running on Debian GNU Linux 9
@@ -53,38 +57,42 @@ It is Libreswan VPN running on Debian GNU Linux 9
 AMI: ami-07cd0d3b7336a9564
 ```
 
-https://github.com/hwdsl2/docker-ipsec-vpn-server
+[Github: /hwdsl2/docker-ipsec-vpn-server](https://github.com/hwdsl2/docker-ipsec-vpn-server)
 
-https://github.com/hwdsl2/setup-ipsec-vpn/blob/master/docs/clients.md
 
-https://aws.amazon.com/marketplace/pp/B073HW9SP3?ref_=aws-mp-console-subscription-detail
+[AWS Marketplace - Debian GNU Linux 9](https://aws.amazon.com/marketplace/pp/B073HW9SP3?ref_=aws-mp-console-subscription-detail)
 
-# Check server status
+[Medium: How to create a Free personal VPN in the cloud](https://medium.com/@tatianaensslin/how-to-create-a-free-personal-vpn-in-the-cloud-using-ec2-openvpn-626c40e96dab)
+
+## Installation - ansible
+
+The VPC `dev.neilpiper.me` is required to be setup using playbook `./infra/infra.yml`
 
 ```
-ssh -i ./aws.vpn.dev.neilpiper.me.pem admin@ec2-ipaddress
+ansible-playbook -vvv -i ../../../testing install-vpn.yml
 ```
 
+
+## Connect to VPN
+
+[Github: /hwdsl2/docker-ipsec-vpn-server VPN Client Setup Instructions](https://github.com/hwdsl2/setup-ipsec-vpn/blob/master/docs/clients.md)
+
+
+```
 PSK: ##REPLACE_ME##
 Pass: vpnpass
 User: vpnuser
+```
+
+## Check VPN server status
 
 ```
+ssh -i ./aws.vpn.dev.neilpiper.me.pem admin@ec2-ipaddress
+sudo -s
 ipsec status
-
 ipsec whack --trafficstatus
 ```
 
-# Services starting
-
-```
-# Start services
-mkdir -p /run/pluto /var/run/pluto /var/run/xl2tpd
-rm -f /run/pluto/pluto.pid /var/run/pluto/pluto.pid /var/run/xl2tpd.pid
-
-/usr/local/sbin/ipsec start
-exec /usr/sbin/xl2tpd -D -c /etc/xl2tpd/xl2tpd.conf
-```
 
 ## Steps
 
