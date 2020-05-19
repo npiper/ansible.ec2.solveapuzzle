@@ -1,0 +1,177 @@
+---
+# AWS tasks are run 'locally'
+
+# Authentication details should be passed in as arguments or exported in the shell before running this playbook
+# Ideally they should be stored in Hashicorp's 'Vault'
+# e.g.
+# export AWS_ACCESS_KEY_ID='my-access-key123'
+# export AWS_SECRET_ACCESS_KEY='sekrit23418'
+#
+# Run with `ansible-playbook -i testing infra.yml`
+
+## Create a VPC - non default
+- name: CREATE AWS ENVIRONMENT
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    instance_type: t2.nano
+    ec2_count: 1
+
+
+  # Gather facts about any VPC with a tag key Name and value Example
+  tasks:
+  - name: Get matching VPC
+    ec2_vpc_net_facts:
+      region: "{{ aws_region }}"
+      filters:
+        "tag:domain_name": "{{ domain_name }}"
+    register: avpc
+
+  - name: Set VPC ID in variable
+    set_fact:
+       vpc_id: "{{ avpc.vpcs[0].vpc_id }}"
+
+  - name: create a new ec2 key pair 'vpce_keypair', returns generated private key
+    ec2_key:
+      name: vpce_keypair
+      region: "{{ aws_region }}"
+      force: false
+    register: vpce_key_result
+
+  - name: Save private vpn key in a local safe space
+    copy: content="{{ vpce_key_result.key.private_key }}" dest="./aws.vpn.{{ domain_name }}.pem" mode=0400
+    when: vpce_key_result.changed
+
+  # Get VPC SubnetId's
+  - name: Get Public Subnet list
+    ec2_vpc_subnet_facts:
+      filters:
+        vpc-id: "{{ vpc_id }}"
+        "tag:zone":  "public"
+    register: subnet_facts
+
+  - name: Create Public subnet id's list variable
+    set_fact:
+      subnet_ids: "{{ subnet_facts.subnets|map(attribute='id')|list }}"
+
+
+  # Get VPC SubnetId's
+  - name: Get Private Subnet list
+    ec2_vpc_subnet_facts:
+      filters:
+        vpc-id: "{{ vpc_id }}"
+        "tag:zone":  "private"
+    register: private_subnet_facts
+
+  - name: Create Private subnet id's list variable
+    set_fact:
+      private_subnet_ids: "{{ private_subnet_facts.subnets|map(attribute='id')|list }}"
+
+  - name: Create Repository Storage bucket - Release path, in region
+    aws_s3:
+      bucket: "{{ domain_name }}.vpcendpoint"
+      mode: create
+      region: "{{ aws_region }}"
+    register: s3_bucket
+
+  - name: Simple PUT operation
+    aws_s3:
+      bucket: "{{ domain_name }}.vpcendpoint"
+      region: "{{ aws_region }}"
+      object: /my/desired/key.txt
+      permission: public-read
+      src: "{{ playbook_dir }}/myfile.txt"
+      mode: put
+
+  - name: Find Route table Private
+    ec2_vpc_route_table_info:
+        region: "{{ aws_region }}"
+        filters:
+          "association.subnet-id" : "{{ private_subnet_ids[0] }}"
+          "tag:zone": "dmz"
+    register: dmz_route_table
+
+  - name: Find my public ip
+    uri:
+      url: http://ifconfig.me/ip
+      return_content: yes
+    register: ip_response
+
+  - name: Create VPC Endpoint Security Group Bastion
+    ec2_group:
+      name: vpce-bastion-secgroup
+      description: VPCEndpoint Bastion Security Group
+      vpc_id: "{{ vpc_id }}"
+      rules:
+      - proto: tcp
+        from_port: 22
+        to_port: 22
+        cidr_ip: "{{ ip_response.content }}/32"
+    register: vpce_bastion_secgroup
+
+  - name: Create VPC Endpoint Security Group Private
+    ec2_group:
+      name: vpce-private-secgroup
+      description: VPCEndpoint Private Security Group
+      vpc_id: "{{ vpc_id }}"
+      rules:
+      - proto: tcp
+        from_port: 22
+        to_port: 22
+        group_id: "{{ vpce_bastion_secgroup.group_id }}"
+    register: vpce_private_secgroup
+
+  - name: Launch EC2 instance in public subnet
+    ec2:
+      group: vpce-bastion-secgroup
+      instance_type: "{{ instance_type }}"
+      ##  Canonical, Ubuntu, 16.04 LTS, amd64 xenial image build on 2018-05-22
+      image: ami-58d7e821
+      vpc_subnet_id: "{{ subnet_ids[0] }}"
+      assign_public_ip: yes
+      wait: true
+      region: "{{ aws_region }}"
+      keypair: "vpce_keypair"
+      count: "{{ ec2_count }}"
+    register: ec2_instance1
+
+  - name: Launch EC2 instance in private subnet
+    ec2:
+      group: vpce-private-secgroup
+      instance_type: "{{ instance_type }}"
+      ##  Canonical, Ubuntu, 16.04 LTS, amd64 xenial image build on 2018-05-22
+      image: ami-58d7e821
+      vpc_subnet_id: "{{ private_subnet_ids[0] }}"
+      assign_public_ip: yes
+      wait: true
+      region: "{{ aws_region }}"
+      keypair: "vpce_keypair"
+      count: "{{ ec2_count }}"
+    register: ec2_instance2
+
+  - name: List supported AWS endpoint services
+    ec2_vpc_endpoint_info:
+      query: services
+      region: "{{ aws_region }}"
+    register: supported_endpoint_services
+
+  - name: Create new vpc endpoint the default policy
+    ec2_vpc_endpoint:
+      state: present
+      region: "{{ aws_region }}"
+      vpc_id: "{{ vpc_id }}"
+      service: "com.amazonaws.{{ aws_region }}.s3"
+      route_table_ids:
+        - "{{ dmz_route_table.route_tables[0].id }}"
+    register: new_vpc_endpoint
+
+  - name: Copy SSH Key to bastion host
+    command: "scp -i aws.vpn.{{ domain_name }}.pem aws.vpn.{{ domain_name }}.pem ubuntu@{{ ec2_instance1.instances[0].dns_name }}:/home/ubuntu/aws.vpn.{{ domain_name }}.pem"
+    register: mymotd
+
+# To test
+# SSH into bastion, then
+# SSH into private
+# Curl test this url - which should be a public IP, but is now accessible via VPC Endpoint
+# https://s3-eu-west-1.amazonaws.com/dev.neilpiper.me.vpcendpoint/my/desired/key.txt

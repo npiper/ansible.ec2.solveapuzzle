@@ -96,15 +96,50 @@ ipsec whack --trafficstatus
 
 ## Steps
 
+### Create Key for SSH
+
+Create a new key called `vpn_keypair` used for SSH into the EC2 VPN instances.
+
 ### Create a Pre-Shared Key
 
-Create a 128 character random string (password generation)
+Create a 128 character random string (password generation).
+
+In Ansible we will use the password generation technique to generate a 32 character Ascii Alpha-numeric string.
+
+```
+vars:
+  pwd_alias: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
+```
 
 ### Capture the IP Address
 
+The local IP address is found using `http://ifconfig.me/ip`
+
+
+### Create 2 VPN Servers
+
+EC2 Instances of Libreswan created in Zone 1a, 1c.
+
+This is to host a VPN server in AWS and not required for an AWS to Client VPN connection.
+
+At this point it is possible to VPN into AWS from the local network.
+
+### Create an AWS Virtual Private Gateway
+
+VPN uses a Virtual Private Gateway similar to a VPC level Internet Gateway or Egress gateway.
+
 ###  Create an AWS Customer Gateway (IP Address)
 
+Using the local IP public internet address register a Customer Gateway with that detail.
 
+### Create a VPN Connection between Virtual Private Gateway and Customer Gateway(s)
+
+In our instance we will create a static route version of this with 2 tunnels.
+
+Each tunnel has an IP address created for configuration.
+
+
+### Create VPN Security Group
 
 ## Type 2 - Client to Site vpn
 

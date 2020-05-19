@@ -59,9 +59,6 @@
 
 
 
-
-  # Create ECS Service
-
   # Get VPC SubnetId's
   - name: Get Public Subnet list
     ec2_vpc_subnet_facts:

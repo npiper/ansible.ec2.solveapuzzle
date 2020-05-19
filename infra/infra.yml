@@ -33,6 +33,12 @@
        tenancy: default
        state: present
       register: avpc
+      # Workaround while ec2_vpc_net has no such functionality
+
+    - name: Ensure VPC has Amazon provided /56
+      command: aws ec2 associate-vpc-cidr-block
+        --amazon-provided-ipv6-cidr-block --vpc-id "{{ avpc.vpc.id }}"
+      when: avpc.vpc.ipv6_cidr_block_association_set is not defined
 
       # We now use the set_fact module
 # to save the id of the VPC in a new variable.
@@ -123,6 +129,7 @@
         routes:
           - dest: "0.0.0.0/0"
             gateway_id: "{{ igw_id }}"
+
 
 ## DMZ - GATEWAY Servers
 
