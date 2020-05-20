@@ -393,12 +393,12 @@ Exception of the VPN Gateway (VGW) which will re- advertise any routes it receiv
 
 Proxies, routers, Amazon EC2 VPN, and NAT instances can enable more flexible connectivity to and from external networks
 
-When these devices receive a packet and forward it to the next hop, the retransmitted packet will then have a source of the Amazon EC2 instance instead of the external network. This behavior requires disabling the source/destination check (this is on the ENI).
+When these devices receive a packet and forward it to the next hop, the retransmitted packet will then have a source of the Amazon EC2 instance instead of the external network. This behaviour requires disabling the source/destination check (this is on the ENI).
 
  * Can use a DNS proxy to access gateway VPC endpoints over AWS Direct Connect or VPN
  * In a Peered VPC scenario - 1 has an IG, one doesn't - using an Internet proxy in the Internet-connected VPC can resolve the transitive routing problem
  * If there are defined private hosted zones with Amazon Route 53 in your VPC, those DNS names are only accessible via the local VPC by default - use DNS Proxies or solutions in these cases
- *
+ 
 
 
 ## Add IPv4 CIDR ranges to a VPC

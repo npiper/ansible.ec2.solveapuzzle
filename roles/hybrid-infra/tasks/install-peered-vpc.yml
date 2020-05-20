@@ -1,0 +1,229 @@
+---
+# AWS tasks are run 'locally'
+
+# Authentication details should be passed in as arguments or exported in the shell before running this playbook
+# Ideally they should be stored in Hashicorp's 'Vault'
+# e.g.
+# export AWS_ACCESS_KEY_ID='my-access-key123'
+# export AWS_SECRET_ACCESS_KEY='sekrit23418'
+#
+# Run with `ansible-playbook -i testing infra.yml`
+
+# EXERCISE 3.4 of AWS Advanced Networking
+# Create a Gateway VPC Endpoint Service, VPC Endpoint
+
+## Create a VPC - non default
+- name: CREATE AWS ENVIRONMENT
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    instance_type: t2.nano
+    ec2_count: 1
+    ec2_image: ami-07f2bbf97bdf932e6
+
+  tasks:
+  - name: create a new ec2 key pair 'vpn_keypair', returns generated private key
+    ec2_key:
+      name: vpcpeer_keypair
+      region: "{{ aws_region }}"
+      force: false
+    register: vpcpeer_key_result
+
+  - name: Save private vpcpeer key in a local safe space
+    copy: content="{{ vpcpeer_key_result.key.private_key }}" dest="./aws.vpcpeer.{{ domain_name }}.pem" mode=0400
+    when: vpcpeer_key_result.changed
+
+  - name: create a VPC with dedicated tenancy and a couple of tags
+    ec2_vpc_net:
+      name: vpc_peerA
+      cidr_block: 10.2.0.0/16
+      region: "{{ aws_region }}"
+      tags:
+        module: ec2_vpc_net
+        this: works
+      tenancy: default
+    register: vpca
+
+  - name: create a VPC with default tenancy and a couple of tags
+    ec2_vpc_net:
+      name: vpc_peerB
+      cidr_block: 10.3.0.0/16
+      region: "{{ aws_region }}"
+      tags:
+        module: ec2_vpc_net
+        this: works
+      tenancy: default
+    register: vpcb
+
+  - name: create a VPC with dedicated tenancy and a couple of tags
+    ec2_vpc_net:
+      name: vpc_peerC
+      cidr_block: 10.4.0.0/16
+      region: "{{ aws_region }}"
+      tags:
+        module: ec2_vpc_net
+        this: works
+      tenancy: default
+    register: vpcc
+
+  - name: Find my public ip
+    uri:
+      url: http://ifconfig.me/ip
+      return_content: yes
+    register: ip_response
+
+  - name: Create VPC Peer A to B
+    ec2_vpc_peer:
+      region: "{{ aws_region }}"
+      vpc_id: "{{ vpca.vpc.id }}"
+      peer_vpc_id: "{{ vpcb.vpc.id }}"
+      state: present
+      tags:
+        Name: Peering connection for VPC A to VPC B
+    register: vpc_peer1
+
+  - name: Create VPC Peer B to C
+    ec2_vpc_peer:
+      region: "{{ aws_region }}"
+      vpc_id: "{{ vpcb.vpc.id }}"
+      peer_vpc_id: "{{ vpcc.vpc.id }}"
+      state: present
+      tags:
+        Name: Peering connection for VPC B to VPC C
+    register: vpc_peer2
+
+  - name: Create VPC Peer C to A
+    ec2_vpc_peer:
+      region: "{{ aws_region }}"
+      vpc_id: "{{ vpcc.vpc.id }}"
+      peer_vpc_id: "{{ vpca.vpc.id }}"
+      state: present
+      tags:
+        Name: Peering connection for VPC B to VPC C
+    register: vpc_peer3
+
+# Accept Peering Requests
+  - name: Accept peering connection from peer VPC A to B
+    ec2_vpc_peer:
+      region: "{{ aws_region }}"
+      peering_id: "{{ vpc_peer1.peering_id }}"
+      state: accept
+    register: vpc_peerA_Bacc
+
+  - name: Accept peering connection from peer VPC B to C
+    ec2_vpc_peer:
+      region: "{{ aws_region }}"
+      peering_id: "{{ vpc_peer2.peering_id }}"
+      state: accept
+    register: vpc_peerB_Cacc
+
+  - name: Accept peering connection from peer VPC C to A
+    ec2_vpc_peer:
+      region: "{{ aws_region }}"
+      peering_id: "{{ vpc_peer3.peering_id }}"
+      state: accept
+    register: vpc_peerC_Aacc
+
+# Internet Gateways
+  - name: Create Internet Gateways
+    ec2_vpc_igw:
+      vpc_id: "{{ item }}"
+      state: present
+    loop:
+      - "{{ vpca.vpc.id }}"
+      - "{{ vpcb.vpc.id }}"
+      - "{{ vpcc.vpc.id }}"
+    register: igws
+
+  - name: Write igw results
+    copy: content="{{ igws }}" dest=./igws.json
+
+# subnets
+  - name: Create Public Subnet's
+    ec2_vpc_subnet:
+      state: present
+      vpc_id: "{{ item.vpcid }}"
+      cidr: "{{ item.cidr }}"
+      resource_tags:
+        Name: "{{ item.name }}"
+    loop:
+      - { name: 'Public Subnet A', vpcid: "{{ vpca.vpc.id }}" , cidr: '10.2.0.0/27'}
+      - { name: 'Public Subnet B', vpcid: "{{ vpcb.vpc.id }}", cidr: '10.3.0.0/27' }
+      - { name: 'Public Subnet C', vpcid: "{{ vpcc.vpc.id }}", cidr: '10.4.0.0/27' }
+    register: subnets
+
+  - name: Write subnet results
+    copy: content="{{ subnets }}" dest=./subnets.json
+
+# Route tables - with Peering connections,
+  - name: Set up public subnet route table
+    ec2_vpc_route_table:
+      vpc_id: "{{ item.vpcid}}"
+      region: "{{ aws_region }}"
+      tags:
+        Name: "{{ item.name }}"
+      subnets:
+        - "{{ item.subnet_id }}"
+      routes:
+        - dest: 0.0.0.0/0
+          gateway_id: "{{ item.igw_id }}"
+        - dest: "{{ item.cidr }}"
+          vpc_peering_connection_id: "{{ item.peerid }}"
+        - dest: "{{ item.cidr2 }}"
+          vpc_peering_connection_id: "{{ item.peerid2 }}"
+    loop:
+        - { name: 'Routing VPC A', vpcid: "{{ vpca.vpc.id }}", peerid: "{{ vpc_peerA_Bacc.peering_id }}", cidr: '10.3.0.0/16',cidr2: '10.4.0.0/16',peerid2: "{{ vpc_peerC_Aacc.peering_id }}", igw_id: "{{ igws.results[0].gateway_id }}", subnet_id: "{{ subnets.results[0].subnet.id }}"}
+        - { name: 'Routing VPC B', vpcid: "{{ vpcb.vpc.id }}", peerid: "{{ vpc_peerB_Cacc.peering_id }}",cidr: '10.4.0.0/16',cidr2: '10.2.0.0/16',peerid2: "{{ vpc_peerA_Bacc.peering_id }}", igw_id: "{{ igws.results[1].gateway_id }}", subnet_id: "{{ subnets.results[1].subnet.id }}" }
+        - { name: 'Routing VPC C', vpcid: "{{ vpcc.vpc.id }}", peerid: "{{ vpc_peerC_Aacc.peering_id }}",cidr: '10.2.0.0/16',cidr2: '10.3.0.0/16',peerid2: "{{ vpc_peerB_Cacc.peering_id }}", igw_id: "{{ igws.results[2].gateway_id }}", subnet_id: "{{ subnets.results[2].subnet.id }}" }
+    register: routetables
+
+# Security Groups * 3
+  - name: Create SG's in each VPC
+    ec2_group:
+      name: "{{ item.sgname}}"
+      description: "{{ item.sgdesc}}"
+      vpc_id: "{{ item.vpc_id }}"
+      rules:
+        - proto: tcp
+          from_port: 22
+          to_port: 22
+          cidr_ip: "{{ ip_response.content }}/32"
+        - proto: icmp
+          from_port: 8 # icmp type, -1 = any type
+          to_port:  -1 # icmp subtype, -1 = any subtype
+          cidr_ip: "10.2.0.0/16"
+        - proto: icmp
+          from_port: 8 # icmp type, -1 = any type
+          to_port:  -1 # icmp subtype, -1 = any subtype
+          cidr_ip: "10.3.0.0/16"
+        - proto: icmp
+          from_port: 8 # icmp type, -1 = any type
+          to_port:  -1 # icmp subtype, -1 = any subtype
+          cidr_ip: "10.4.0.0/16"
+    loop:
+      - {sgname: 'SSH VPC A', sgdesc: 'SecGroup for VPCA', vpc_id: "{{ vpca.vpc.id }}"}
+      - {sgname: 'SSH VPC B', sgdesc: 'SecGroup for VPCB', vpc_id: "{{ vpcb.vpc.id }}"}
+      - {sgname: 'SSH VPC C', sgdesc: 'SecGroup for VPCC', vpc_id: "{{ vpcc.vpc.id }}"}
+    register: security_groups
+
+  - name: Write secgroup results
+    copy: content="{{ security_groups }}" dest=./secgroups.json
+
+
+# Ec2 instances in each VPC Public Subnet
+  - name: Create EC2 instances in each VPC
+    ec2:
+      key_name: vpcpeer_keypair
+      instance_type: "{{ instance_type }}"
+      image: "{{ ec2_image }}"
+      region: "{{ aws_region }}"
+      group: "{{ item.sg }}"
+      wait: yes
+      count: 1
+      vpc_subnet_id: "{{ item.subnet }}"
+      assign_public_ip: yes
+    loop:
+      - {subnet: "{{ subnets.results[0].subnet.id }}", sg: "{{ security_groups.results[0].group_name }}"}
+      - {subnet: "{{ subnets.results[1].subnet.id }}", sg: "{{ security_groups.results[1].group_name }}"}
+      - {subnet: "{{ subnets.results[2].subnet.id }}", sg: "{{ security_groups.results[2].group_name }}"}
