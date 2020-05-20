@@ -9,6 +9,9 @@
 #
 # Run with `ansible-playbook -i testing infra.yml`
 
+# EXERCISE 3.1 of AWS Advanced Networking
+# Create a Gateway VPC Endpoint for Amazon S3
+
 ## Create a VPC - non default
 - name: CREATE AWS ENVIRONMENT
   hosts: localhost
@@ -167,7 +170,7 @@
     register: new_vpc_endpoint
 
   - name: Copy SSH Key to bastion host
-    command: "scp -i aws.vpn.{{ domain_name }}.pem aws.vpn.{{ domain_name }}.pem ubuntu@{{ ec2_instance1.instances[0].dns_name }}:/home/ubuntu/aws.vpn.{{ domain_name }}.pem"
+    command: "scp -o "StrictHostKeyChecking no" -i aws.vpn.{{ domain_name }}.pem aws.vpn.{{ domain_name }}.pem ubuntu@{{ ec2_instance1.instances[0].dns_name }}:/home/ubuntu/aws.vpn.{{ domain_name }}.pem"
     register: mymotd
 
 # To test

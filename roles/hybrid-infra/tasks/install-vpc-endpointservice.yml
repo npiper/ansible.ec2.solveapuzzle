@@ -1,0 +1,214 @@
+---
+# AWS tasks are run 'locally'
+
+# Authentication details should be passed in as arguments or exported in the shell before running this playbook
+# Ideally they should be stored in Hashicorp's 'Vault'
+# e.g.
+# export AWS_ACCESS_KEY_ID='my-access-key123'
+# export AWS_SECRET_ACCESS_KEY='sekrit23418'
+#
+# Run with `ansible-playbook -i testing infra.yml`
+
+# EXERCISE 3.2,3.3 of AWS Advanced Networking
+# Create a Gateway VPC Endpoint Service, VPC Endpoint
+
+## Create a VPC - non default
+- name: CREATE AWS ENVIRONMENT
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    instance_type: t2.nano
+    ec2_count: 1
+
+
+  # Gather facts about any VPC with a tag key Name and value Example
+  tasks:
+  - name: create a new ec2 key pair 'vpceps_keypair', returns generated private key
+    ec2_key:
+      name: vpceps_keypair
+      region: "{{ aws_region }}"
+      force: false
+    register: vpceps_key_result
+
+  - name: Save private vpn key in a local safe space
+    copy: content="{{ vpceps_key_result.key.private_key }}" dest="./aws.vpceps.{{ domain_name }}.pem" mode=0400
+    when: vpceps_key_result.changed
+
+## 3.2 Create a VPC Endpoint Service
+## 3.3 Create VPC endpoint
+
+## Could also test AWS Private link marketplace
+
+## Create a Provider VPC to Peer to
+
+  - name: Find my public ip
+    uri:
+      url: http://ifconfig.me/ip
+      return_content: yes
+    register: ip_response
+
+  - name: create a VPC with dedicated tenancy and a couple of tags
+    ec2_vpc_net:
+      name: "{{ domain_name }}_services"
+      cidr_block: 10.10.0.0/16
+      region: "{{ aws_region }}"
+      tags:
+        domain_name": "{{ domain_name }}"
+        zone: "provider"
+      tenancy: default
+    register: provider_vpc
+
+  - name: Internet Gateway for new VPC
+    ec2_vpc_igw:
+       vpc_id: "{{ provider_vpc.vpc.id}}"
+       tags:
+          Name: "{{ context }} Internet Gateway"
+          module: ansible ec2_vpc_igw
+          domain_name: "{{ domain_name }}"
+          context: "{{ context }}"
+          zone: "provider"
+       state: present
+    register: vpc_igw
+
+  - name: Set Internet Gateway ID in variable
+    set_fact:
+        igw_id: "{{ vpc_igw.gateway_id }}"
+
+  - name: Create Public subnet for App Servers in 1a
+    ec2_vpc_subnet:
+      vpc_id: "{{ provider_vpc.vpc.id}}"
+      region: "{{ aws_region }}"
+      cidr: 10.10.0.0/27
+      az: "{{ aws_region }}a"
+      resource_tags:
+        Name: Provider Subnet 1A
+        zone: public
+        context: "{{ context }}"
+        threat: high
+      state: present
+    register: public_subnet_1a
+
+  - name: Set up public subnet route table for Internet Traffic in 1a AZ
+    ec2_vpc_route_table:
+      vpc_id: "{{ provider_vpc.vpc.id }}"
+      region: "{{ aws_region }}"
+      purge_routes: true
+      purge_subnets: true
+      state: present
+      tags:
+        Name: "Provider - Public Route Table"
+        context: "{{ context }}"
+        zone: public
+        threat: high
+      subnets:
+        - "{{ public_subnet_1a.subnet.id }}"
+      routes:
+        - dest: "0.0.0.0/0"
+          gateway_id: "{{ igw_id }}"
+
+#### ELB Port 80, Source 0.0.0.0, SSH 22 , source local IP
+  - name: ELB, WebServer Security Group
+    ec2_group:
+      name: "provider_elb_sg"
+      description: elastic load balancer sg with rule descriptions
+      vpc_id: "{{ provider_vpc.vpc.id }}"
+      region: "{{ aws_region }}"
+      rules:
+        - proto: tcp
+          ports:
+          - 80
+          cidr_ip: 0.0.0.0/0
+          rule_desc: allow all on port 80
+        - proto: tcp
+          from_port: 22
+          to_port: 22
+          cidr_ip: "{{ ip_response.content }}/32"
+          rule_desc: SSH via port 22 from trusted IP
+    register: elb_sg
+
+  - name: Launch ECS AMI EC2 instance in public subnet 1a
+    ec2:
+      group: provider_elb_sg
+      instance_type: "{{ instance_type }}"
+      ##  Amazon Linux 2 AMI (HVM), SSD Volume Type eu-west-1
+      image: ami-07f2bbf97bdf932e6
+      vpc_subnet_id: "{{ public_subnet_1a.subnet.id }}"
+      assign_public_ip: yes
+      wait: true
+      region: "{{ aws_region }}"
+      keypair: "vpceps_keypair"
+      #count_tag:
+      #  type: vpc_endpoint
+      #exact_count: 1
+      # mkdir -p /run/pluto /var/run/pluto /var/run/xl2tpd\nrm -f /run/pluto/pluto.pid /var/run/pluto/pluto.pid /var/run/xl2tpd.pid\n/usr/local/sbin/ipsec start\nexec /usr/sbin/xl2tpd -D -c /etc/xl2tpd/xl2tpd.conf
+      user_data: "#!/usr/bin/env bash\nyum -y -q install httpd\nservice httpd start"
+      instance_tags:
+        type: vpc_endpoint
+        description: VPC Endpoint Service
+    register: ec2_vpcendpoint_instance
+
+# Register an IP address target to a target group
+
+  - name: Create Target Group
+    elb_target_group:
+      name: mytargetgroup
+      protocol: tcp
+      port: 80
+      vpc_id: "{{ provider_vpc.vpc.id }}"
+      target_type: instance
+      health_check_path: /
+      health_check_protocol: http
+      health_check_port: 80
+      successful_response_codes: "200"
+      stickiness_enabled : no
+      targets:
+        - Id: "{{ ec2_vpcendpoint_instance.instances[0].id }}"
+          Port: 80
+      state: present
+
+
+  - name: Network Load Balancer Port 80
+    elb_network_lb:
+      name: "elb-sp1"
+      state: present
+      #instance_ids:
+      # - "{{ ec2_vpcendpoint_instance.instances[0].id }}"
+      region: "{{ aws_region }}"
+      scheme: internal
+      subnets:
+        - "{{ public_subnet_1a.subnet.id }}"
+      #security_group_ids:
+      #   - "{{ elb_sg.group_id }}"
+      listeners:
+         - Protocol: TCP
+           Port: 80
+           DefaultActions:
+             - Type: forward # Required. Only 'forward' is accepted at this time
+               TargetGroupName: mytargetgroup # Required. The name of the target group
+
+  #- name: Endpoint Service - Load Balancer, name
+
+
+
+
+  ## 3.3
+  - name: 3.3 Get matching VPC
+    ec2_vpc_net_facts:
+      region: "{{ aws_region }}"
+      filters:
+        "tag:domain_name": "{{ domain_name }}"
+    register: avpc
+
+  - name: 3.3 Set VPC ID in variable
+    set_fact:
+       vpc_id: "{{ avpc.vpcs[0].vpc_id }}"
+
+  #- name: 3.3 Security Group - port 80
+  # SG that allows TCP port 80 in, apply to Endpoint
+
+
+  #- name: Create Endpoint using Provider Service Name
+  # VPC, Subnet, SG with Port 80 enabled
+  # Endpoint Connections in VPC Endpoint service
+  # Your endpoint should now be functional in the public subnet of the consumer VPC
