@@ -14,6 +14,8 @@ Regions, Availability Zones, edge locations, and customer cross-connect faciliti
 
 When you use services that are delivered directly on the Internet, such as edge locations and public service endpoints, you control network behaviors using service-specific mechanisms like policies and whitelists
 
+![Layer7ISO](./docs/LayerISO_Diagram.png)
+
 ### How Packet exchange works in a VPC
 
 When an Amazon EC2 instance, say Instance A, in your VPC initiates communication with another Amazon EC2 instance, say Instance B, over IPv4, Instance A will broadcast an Address Resolution Protocol (ARP) packet to obtain the Instance B’s Media Access Control (MAC) address. The ARP packet leaving Instance A is intercepted by the server Hypervisor. The Hypervisor queries the mapping service to identify whether Instance B exists in the VPC and, if so, obtains its MAC address. The Hypervisor returns a synthetic ARP response to Instance A containing Instance B’s MAC address.
@@ -192,7 +194,6 @@ two types of VPC endpoints: interface and gateway
 
 Avoids sharing / throttling of NAT gateway, Internet Gateway (5 GBps)
 
-
 VPC endpoints are supported for IPv4 traffic only
 
 Interface endpoints (powered by AWS PrivateLink) use an elastic network interface in your VPC with a private IP address that serves as an entry point for traffic destined to a supported service
@@ -202,6 +203,8 @@ Interface endpoints support Amazon Kinesis Streams, Elastic Load Balancing API, 
 Gateway endpoints use a route table target for a specified route in your route table for supported services. Gateway endpoints currently support communication with Amazon Simple Storage Service (Amazon S3) and Amazon DynamoDB
 
 Endpoints allow resources in your VPC to use their private IPv4 addresses to communicate with resources outside of their VPC.
+
+You cannot access a VPC endpoint from across an AWS managed VPN connection or a VPC peering connection. (Workaround - Modify DNS and use a proxy fleet to reach VPC endpoints)
 
 ### Creating a VPC Endpoint (Gateway)
 
@@ -398,7 +401,7 @@ When these devices receive a packet and forward it to the next hop, the retransm
  * Can use a DNS proxy to access gateway VPC endpoints over AWS Direct Connect or VPN
  * In a Peered VPC scenario - 1 has an IG, one doesn't - using an Internet proxy in the Internet-connected VPC can resolve the transitive routing problem
  * If there are defined private hosted zones with Amazon Route 53 in your VPC, those DNS names are only accessible via the local VPC by default - use DNS Proxies or solutions in these cases
- 
+
 
 
 ## Add IPv4 CIDR ranges to a VPC
@@ -406,14 +409,14 @@ When these devices receive a packet and forward it to the next hop, the retransm
 RFC1918 addresses when possible
 
 ```
-0.0.0.0        -   10.255.255.255  (10/8 prefix)
+10.0.0.0        -   10.255.255.255  (10/8 prefix)
 172.16.0.0      -   172.31.255.255  (172.16/12 prefix)
 192.168.0.0     -   192.168.255.255 (192.168/16 prefix)
 ```
 
 The resize VPC feature allows you to add up to five additional IPv4 CIDR ranges to your VPC
 
-New VPC CIDR ranges cannot overlap with the existing CIDR range or the CIDR range of any current VPC peer
+New VPC CIDR ranges cannot overlap with the existing CIDR range or the CIDR range of any current VPC peer. New ranges must be more specific than any currently-defined static route in the VPC route tables
 
 You can effectively create ranges up to a /14 (262K) or /15 using individual /16 (65k) ranges.
 
@@ -424,3 +427,377 @@ Grants an AWS-authorized provider account permission to attach a customer networ
 The cross-account network interface does not provide high availability or fault tolerance
 
 effectively move the instance out of the VPC while maintaining a network interface for communication. In summary, a cross-account network interface is a useful feature if you are interacting with a low level of abstraction.
+
+## Chapter 3 - Revision Areas
+
+Understand how to access VPC endpoints from external networks
+Understand how to secure VPC endpoints.
+Understand the difference between AWS PrivateLink and VPC peering
+
+
+
+# Chapter 4 - Virtual Private Networks (VPN)
+
+![Sample VPN](./docs/AWS_TestHybridNetwork.png)
+
+## Site to Site VPNs
+
+A site-to-site VPN connection allows two sites, to communicate securely with each other over an untrusted intermediary network, such as the public Internet.
+
+A VPN connection to AWS can only be used to access resources inside a VPC. This excludes services such as Amazon S3 that sit outside the boundaries of a VPC.
+
+For the two sites to set up a VPN connection, a VPN termination endpoint is required at each site (Think of Availability, Scalability of these in Hybrid archs).
+
+Endpoints handle VPN protocols, exchange and the associated packet processing, including encapsulation and encryption.
+
+### Virtual Private Gateway vs. VPN Instance
+
+Virtual Private Gateway (VPG) - hybrid IT connectivity leveraging VPN and AWS Direct Connect, can be attached to any VPC in the same account and region. HA, Multi-AZ install. 2 Tunnels.
+
+Each VPC VPC can have only one VGW attached to it at any given point in time.
+
+On creating a VPG an option to define an Autonomous System Number (ASN) for the AWS side of the external Border Gateway Protocol (BGP) session - private ASNs include 64512 to 65534. (Can't change once assigned)
+
+VGW supports only IPsec VPN
+
+VGW supports both static route VPNs and those based on the BGP dynamic routing protocol
+
+You can enable VGW route propagation, which will allow the VPC subnet route table to ingest routes learned by the VGW automatically via BGP.
+
+AWS-managed VPN offers a strong cryptography suite, including AES 256. It also supports BGP protocol and Network Address Translation/Traversal (NAT-T).
+
+The VPN inside tunnel addresses can be the same as the peer IP addresses on AWS Direct Connect.
+
+AWS Management Console will allow you to generate a configuration for your device
+
+Customer Gateway initialises the tunnels to the VGW using the details like the PSK and Inside IP addresses, routing details.
+
+monitor the status of the VPN tunnels using Amazon CloudWatch metrics
+
+### AWS VPN CloudHub
+
+Typically most useful for multiple client sites as a central hub router connecting multiple remote sites (e.g.  London, Manchester, Dublin,..)  - Hub, Spoke.
+
+The sites must not have overlapping IP ranges
+
+Customer gateways advertise the appropriate routes (BGP prefixes) over their VPN connections
+
+### Software VPN's
+
+choosing the VPN software you wish to run and the size of the Amazon EC2 instance that will run this software
+
+Monitoring - VPN- and operating system-related metrics won’t be visible in Amazon CloudWatch by default
+
+Non IPSec?
+Special features, higher controls, transitive Routing, multi-cast..
+
+Consider Availability, Redundancy
+Tunnels per availablity zone with IP's
+
+### Customer Gateways
+
+VPN termination device at the customer’s on-premises end
+Can also be hosted in AWS as an EC2 instance running VPN software
+
+When using the  EC2 instance-based VPN termination option, the choice of VPN protocol is dependent on the VPN software that you install on the Amazon EC2 instance. Common protocols like GRE, DMVPN, and others can be used as an alternative to IPsec
+
+## Client to Site VPNs
+
+Or 'Remote Access VPN' - allows single hosts to gain access to resources inside a given network in a secure and private manner across an untrusted intermediary network.
+
+This can be useful for a remote laptop or PC to gain access to Amazon EC2 instances inside an Amazon VPC over the public Internet.
+
+You need a gateway inside of the VPC that will be responsible for accepting VPN connections from remote hosts -  have to use an Amazon EC2 instance as a client-to-site VPN gateway.
+
+## AWS Direct Connect & VPN's
+
+Traffic over AWS Direct Connect is not encrypted by default because the link is completely private and isolated
+
+An IPsec VPN connection can be easily set up over AWS Direct Connect. You will create an IPsec connection to the VGW as explained in the AWS-managed VPN option, but the actual traffic flow will be over AWS Direct Connect
+
+VGW endpoints can be accessed over public VIF
+
+## References
+
+https://d1.awsstatic.com/whitepapers/building-a-scalable-and-secure-multi-vpc-aws-network-infrastructure.pdf
+
+https://docs.aws.amazon.com/vpc/latest/userguide/vpc-ug.pdf (VPN Section)
+
+https://d1.awsstatic.com/whitepapers/aws-amazon-vpc-connectivity-options.pdf
+
+
+# Chapter 5 - AWS Direct Connect
+
+![DirectConnect](./docs/DirectConnect.png)
+
+It is your responsibility as an AWS customer to decide how much resilience is appropriate regarding how you reach AWS Direct Connect locations and the devices within them.
+
+ * Single Connection
+ * Dual Connection:  Single location (LAG (Aggregated bandwidth) or Independent)
+ * Backup VPN Connection (Fallback)
+ * Single Connections, Dual DC Locations
+ * Dual Connections, Dual DC Locations
+
+Pricing:
+(1) Pricing per port-hour for all AWS Direct Connect locations and (2) data transfer-out fees by AWS Direct Connect locations and AWS region.
+
+Direct Connect enables you to benefit from reduced data transfer charges relative to those applied to data transfer over the Internet. (Data transfer changes of Internet rate vs. Direct connect rate.)
+
+Provides a more consistent network experience than Internet-based connections at bandwidths ranging from 50 Mbps to 10 Gbps on a single connection.  (Can combine connections in up to 4 LAG's (Link Aggregation Group) for greater bandwidth).
+
+802.1Q VLANs (Virtual Local Area Networks) across 1 Gbps or 10 Gbps Ethernet connections.
+Network must also support Border Gateway Protocol (BGP) and BGP MD5 authentication.
+
+VLAN tag to the header of an Ethernet frame to define membership of a particular VLAN.
+
+You can optionally configure Bidirectional Forwarding Detection (BFD) on your network - Recommended when configuring multiple AWS Direct Connect connections or when configuring a single AWS Direct Connect connection and a VPN connection as a backup to ensure fast detection and failover.
+
+Physical connectivity to AWS Direct Connect is established either at an AWS Direct Location or via a Partner. ( 1 Gbps and 10 Gbps.)
+
+4 in UK/IRE - DigitalReality, Equinix (GBR), Eircom, Interxion (IRE)
+
+VIF's can be owned by your account or when choosing another account, that VIF becomes a ' hosted VIF'.
+
+## Public VIF's
+
+Used to enable your network to reach all of the AWS public IP addresses for the AWS Region with which your AWS Direct Connect connection is associated.
+
+Public VIFs are typically used to enable direct network access to services that are not reachable via a private IP address within your own VPC (S3, DynamoDB, SQS, Public Endpoints to manage AWS VPN Services)
+
+In addition, public VIFs are also enabled for “Global” capabilities, which allows you to receive BGP announcements for all AWS public IPs globally.
+
+Public VIFs enable announcements of all Amazon public IPs
+
+BGP Peer IP information for Public VIF's are mandatory.
+Need to also provide Prefixes you want to advertise (up to 1000 Public)
+Supply a Public ASN Number
+AWS Verifies ASN information for BGP
+
+You must also specify the IP address prefixes you plan to announce to AWS over this type of VIF
+
+### Direct connect Public VIF is Region restricted - US Exception
+
+IP Ranges of e.g. US East 1 aren't advertised over the BGP peer in Asia Pacific.
+
+In the US there is a concept of Direct connect Inter region traffic, 'Inter region advertisement and routing'
+
+## Private VIF's
+
+Enable your network to reach resources that have been provisioned within your VPC via their private IP address (e.g. 10.0.0.4) A private VIF is associated with the VGW for your VPC to enable this connectivity.  Private VIFs are used to enable direct network access to services that are reachable via an IP address within your own VPC.
+
+Good use case for 'Data Center extension' - does not need an Internet Gateway, Public IP addresses
+
+one VIF (Virtual Interface) per AWS Direct Connect connection
+
+eed to also provide Prefixes you want to advertise (up to 100 Private     )
+
+Needs:
+
+ * Connection ID (Direct Connect ID)
+ * Name - 'Virtual Interface Name'
+ * Virtual Interface Owner
+ * VGW (VPN Gateway) - VIF will terminate into a specific VGW, attached to VPC for use
+   - If not your account, the provider account will do this step on approval
+ * VLAN ID (e.g. 200)
+ * Address Family (IPv4, IPv6)
+ * BGP ASN (In private range - 64,512 - 65535 )
+   - MD5 Key to authenticate the BGP session (Can be auto-generated)
+
+## Direct Connect Gateway
+
+Can combine Private VIFs with multiple VGWs in the local or in remote regions.
+
+You can use this feature to establish connectivity from an AWS Direct Connect location in one geographical zone to an AWS Region in a different geographical zone.
+
+## VPN's with AWS Direct connect
+
+VPN’s can be used with AWS Direct Connect, either as a backup connectivity solution or to provide encryption for the transport of data over AWS Direct Connect.
+
+A VPN connection provides encrypted access over the Internet to resources within your VPC using their private IP address. Both AWS Direct Connect and VPN connections terminate on the VGW for your VPC.
+
+Easier to use use a dynamic BGP-based VPN to enable the most flexible and consistent behavior for all network traffic flows.
+
+Routing / VGW Routing - AWS Direct Connect always prioritized over a VPN for any given prefix that is advertised over both connections.
+
+Layer 4 - TLS (SSL) over Direct connect
+Layer 3 Encryption - VPN, Public VIF with managed VPN connection
+
+## Direct Connect with Transit Virtual Private Cloud
+
+A 'Detached' VPN Gateway (Created but not attached to a VPC)
+
+## BGP Path, Routing selection Priority
+
+Routing decisions for network traffic leaving your VPC occur first within the VPC based on entries in your route tables and then within the VGW before exiting via the VPN connection.
+
+## References
+
+http://docs.aws.amazon.com/directconnect/latest/UserGuide
+https://aws.amazon.com/directconnect/
+
+
+# Chapter 6 - DNS & Load Balancing
+
+Amazon Route 53 and Elastic Load Balancing
+
+![Route53 Overview](./docs/Route53-DNS.png)
+
+## DNS and AWS
+
+DNS provides IPv4 addresses in response to a type A query and IPv6 addresses in response to a type AAAA query. Amazon Route 53 supports both type A and type AAAA resource record sets
+
+Name Servers are servers in the DNS that translate domain names into IP addresses
+
+ICAN Root Servers (13) - Usually Top Level Domains (e.g. .com, .org)
+Which will fan Queries out to linked name servers, until finally a match is found at the 'closest' name server to provide the IP address of the mapped DNS Name query.
+
+DNS Queries are sent out via the original computer to 'Resolving Name Servers' take care of the requesting process for the end user transparently to Query DNS Servers.  Users will usually have a few resolving Name Servers configured on their computer systems.
+
+### Record Types
+
+ * SOA - Statment of Authority - base DNS record of a domain + Config, Timeouts etc;
+ * NS - Namespace
+ * A, AAAA - Map a host to an IP Address
+ * CAA - Certificate Authority Authorization - Trusted CA's for Domain, Sub-Domain
+ * CNAME - Alias for a host (e.g. www.dev.neilpiper.me)
+ * MX - Mail exchange , mail servers
+ * NAPTR - Name Authority pointer - DDDS Applications, dynamic replacement
+ * NS - Name server records - where to direct DNS queries to
+ * PTR - maps an IP address to a DNS Name
+ * SPF - Sender Policy Framework -what IP addresses are authorized to send an email from your domain name (Spam counter)
+ * TXT - Text record - sometimes used for Data, Automation of registration
+ * SRV - Service record - Host,Port of servers for specified services
+
+### VPC DNS Behaviour
+
+`enableDnsHostnames` - whether the instances launched in the VPC will receive a public DNS hostname
+
+`enableDnsSupport` - DNS resolution is supported for the VPC, enables use of an Amazon-provided DNS server and is a pre-requisite for Enabling Public DNS Host names.
+
+If customized DNS names are needed for a VPC, you can use Amazon Route 53
+
+Amazon Route 53 is the service that provides you with the ability to specify either a public DNS hostname through public hosted zones or private hosted zones.
+
+### VPC Peering and DNS
+
+DNS resolution is supported over VPC peering connections, but both VPCs must be enabled for DNS hostnames and DNS resolution.
+
+### Using DNS With SimpleAD ()
+
+Can resolve DNS requests to the private hosted zone and gives the ability to resolve those private-only DNS hostnames from your on-premises environment.  
+
+Simple AD forwards DNS requests to the IP address of the Amazon-provided DNS servers for your VPC.
+
+By pointing DNS queries at Simple AD, it will then forward requests internally within AWS for VPC DNS name resolution
+
+### Custom DNS Resolution
+
+Used when you need to DNS queries bound for on-premises servers are conditionally forwarded to on-premises DNS servers
+
+Typically use a Resolver (To On prem DNS, or Public DNS) & Forwarder (Request to Public or On Prem DNS)
+
+## AWS Route 53
+
+Highly available and scalable cloud DNS web service that is designed to give developers and organizations an extremely reliable and cost-effective way to route end users to Internet applications
+
+When someone enters your domain name in a browser or sends you an email, a DNS request is forwarded to the nearest Amazon Route 53 DNS server in a global network of authoritative DNS servers. Amazon Route 53 responds with the IP address that you specified.
+
+These responses can include, for example, the IP address of a web server, the IP address for the nearest Amazon CloudFront Edge location, or the IP address for an Elastic Load Balancing load balancer
+
+Amazon Route 53 charges a monthly fee for each hosted zone
+
+### Public Services by using Aliases
+
+Amazon CloudFront, Amazon Simple Storage Service (Amazon S3), or Elastic Load Balancing, you can configure Amazon Route 53 to resolve the IP addresses of these resources directly by using aliases.
+
+Example:  S3 HTTP URL
+
+### Hosted zones
+
+A hosted zone is a collection of resource record sets hosted by Amazon Route 53, managed together under a single domain name.
+
+There are two types of hosted zones: private and public.
+
+A **private hosted zone** is a container that holds information about how you want to route traffic for a domain and its subdomains within one or more VPCs.
+
+A **public hosted zone** is a container that holds information about how you want to route traffic on the Internet for a domain and its sub-domains.
+
+Use an alias record, not a CNAME, if you want to provide IP addresses for the zone itself
+
+### Routing Policies (Record Set)
+
+When you create a resource record set, you set a routing policy that determines how Amazon Route 53 responds to queries - simple, weighted, latency-based, failover, geolocation, multianswer value, and geoproximity.
+
+Routing policies can also be associated with health checks
+
+Can combine Routing policies (e.g. Latency + Failover)
+
+### Health Checks
+
+Health checks and DNS failover are the primary tools in the Amazon Route 53 feature set that help make your application highly available and resilient to failures
+
+Protocol, Request Interval, Failure Threshold
+
+Amazon Route 53 health checks are not triggered by DNS queries; they are run periodically by AWS, and the results are published to all DNS servers
+
+If a health check fails to receive a response, it will trigger an action.
+
+An Amazon CloudWatch alarm is triggered, and it will then trigger an action with Amazon Simple Notification Service (Amazon SNS).
+
+Recipients who are subscribed to an Amazon SNS topic will receive a notification that a health check has failed.
+
+Health checks are defined at the target group level and many Amazon CloudWatch metrics are reported at the target group level
+
+#### Latency Based Routing (Typically best)
+
+Latency-based routing allows you to route your traffic based on the lowest network latency for your end user. You can use a latency-based routing policy when you have resources that perform the same function in multiple Availability Zones or AWS Regions. (Application ELB's)
+
+#### Failover Routing Policy
+
+Useful for Downtime, for re-direction for example to a static S3 bucket / webpage when service is down.  (Public hosted zones only)
+
+#### Geolocation
+
+You can specify geographic locations by continent, by country, or by state in the United States
+
+## Elastic Load Balancing
+
+ * Classic
+ * Network (TCP) - Layer 4
+ * Application Layer 7 - Path, Host based routing, SSL Offloading, Sticky sessions
+
+
+
+You can either manage your own virtual load balancers on Amazon EC2 instances or leverage an AWS Cloud service called Elastic Load Balancing, which provides a managed load balancer for you
+
+Elastic Load Balancing seamlessly integrates with the Auto Scaling service to scale automatically the Amazon EC2 instances behind the load balancer- allows you to distribute traffic across a group of Amazon EC2 instances in one or more Availability Zone
+
+supports routing and load balancing of Hypertext Transfer Protocol HTTP, HTTPS, TCP, and Transport Layer Security (TLS) traffic to Amazon EC2 instances
+
+Elastic Load Balancing also supports integrated certificate management and SSL termination.
+
+### Containerised apps
+
+Application Load Balancers - Containerized applications by having the ability to select an unused port when scheduling a task and registering that task with a target group using this port
+
+Support for containerized applications. Amazon EC2 Container Service (Amazon ECS) can select an unused port when scheduling a task and register the task with a target group using this port. This enables you to make efficient use of your clusters.
+
+### HTTPS Load Balancers
+
+'SSL Offload'
+
+In order to use SSL, you must install an SSL certificate on the load balancer that it uses to terminate the connection and then decrypt requests from clients before sending requests to the back-end Amazon EC2 instances
+
+If you are performing SSL on your back-end instances, the Network Load Balancer may be a better choice
+
+You can optionally choose to enable authentication on your back-end instances
+
+### Target Groups
+
+Target groups allow you to group together targets, such as Amazon EC2 instances, for the Application Load Balancer and Network Load Balancer. The target group can be used in listener rules. This makes it easy to specify rules consistently across multiple targets.
+
+You define health check settings for your load balancer on a per-target group basis.
+
+### References
+
+https://d1.awsstatic.com/whitepapers/hybrid-cloud-dns-options-for-vpc.pdf

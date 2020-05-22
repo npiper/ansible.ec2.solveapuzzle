@@ -10,7 +10,10 @@
 # Run with `ansible-playbook -i testing infra.yml`
 
 # EXERCISE 3.2,3.3 of AWS Advanced Networking
-# Create a Gateway VPC Endpoint Service, VPC Endpoint
+# Create a new Service Provider VPC, Network Load Balancer and a WebServer
+# Create a Gateway VPC Endpoint Service (Interface)
+# Create a VPC Endpoint in the 'Consumer' VPC to that Endpoint Service
+# Accept the connection
 
 ## Create a VPC - non default
 - name: CREATE AWS ENVIRONMENT
@@ -48,7 +51,7 @@
       return_content: yes
     register: ip_response
 
-  - name: create a VPC with dedicated tenancy and a couple of tags
+  - name: create a VPC with default tenancy and a couple of tags
     ec2_vpc_net:
       name: "{{ domain_name }}_services"
       cidr_block: 10.10.0.0/16

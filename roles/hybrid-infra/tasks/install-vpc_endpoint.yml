@@ -10,7 +10,8 @@
 # Run with `ansible-playbook -i testing infra.yml`
 
 # EXERCISE 3.1 of AWS Advanced Networking
-# Create a Gateway VPC Endpoint for Amazon S3
+# Create a Gateway VPC Endpoint for Amazon S3 in a Private subnet
+# Only accessible via a Public subnet Bastion host ssh to private subnet
 
 ## Create a VPC - non default
 - name: CREATE AWS ENVIRONMENT
@@ -78,7 +79,7 @@
       region: "{{ aws_region }}"
     register: s3_bucket
 
-  - name: Simple PUT operation
+  - name: Simple PUT operation - file '/my/desired/key.txt'
     aws_s3:
       bucket: "{{ domain_name }}.vpcendpoint"
       region: "{{ aws_region }}"

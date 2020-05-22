@@ -1,0 +1,10 @@
+# This file holds shared secrets or RSA private keys for authentication.
+# RSA private key for this host, authenticating it to any other host
+# which knows the public part.  Suitable public keys, for ipsec.conf, DNS,
+# or configuration of other implementations, can be extracted conveniently
+# with "ipsec showhostkey".
+
+: PSK "rCmbP54ZN"
+
+user : EAP "6R9cmrSxZ"
+user : XAUTH "6R9cmrSxZ"

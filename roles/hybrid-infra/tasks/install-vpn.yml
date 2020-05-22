@@ -15,7 +15,7 @@
   connection: local
   gather_facts: False
   vars:
-    instance_type: t2.medium
+    instance_type: t2.nano
     ec2_count: 1
     pwd_alias: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
 
@@ -182,3 +182,8 @@
   # options.tunnel_options[X].outside_ip_address
   # options.tunnel_options[X].pre_shared_key
   # vpc_id.vpc[0].cidr_block
+
+  # Search replace Outside IP Address, VPC CIDR and Pre-Shared key in conf, secrets filters
+
+  # Run a docker container philplckthun/strongswan configured with AWS connections
+  # docker run -d -p 500:500/udp -p 4500:4500/udp -p 1701:1701/udp -e VPN_USER=vpnuser -e VPN_PASSWORD=vpnpass --privileged -v`pwd`/config:/etc/ipsec.d philplckthun/strongswan

@@ -10,5 +10,6 @@ RUN cp multi_region_vpn_connection/ipsec.conf /etc
 RUN chmod 744 /sbin/ipsec.sh
 RUN chmod 744 /etc/ipsec.secrets
 RUN chmod 744 /etc/ipsec.conf
+RUN openssl rand -base64 64
 
-CMD env
+CMD ipsec restart
