@@ -1,0 +1,225 @@
+---
+# AWS tasks are run 'locally'
+
+# Authentication details should be passed in as arguments or exported in the shell before running this playbook
+# Ideally they should be stored in Hashicorp's 'Vault'
+# e.g.
+# export AWS_ACCESS_KEY_ID='my-access-key123'
+# export AWS_SECRET_ACCESS_KEY='sekrit23418'
+#
+# Run with `ansible-playbook -i testing infra.yml`
+
+# EXERCISE 6.2 of AWS Advanced Networking
+# Create an ELB over zones, regions
+
+## Create a VPC - non default
+- name: CREATE AWS ENVIRONMENT
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    instance_type: t2.nano
+    ec2_count: 1
+
+  # Gather facts about any VPC with a tag key Name and value Example
+  tasks:
+  - name: Get matching VPC
+    ec2_vpc_net_facts:
+      region: "{{ aws_region }}"
+      filters:
+        "tag:domain_name": "{{ domain_name }}"
+    register: avpc
+
+  - name: Set VPC ID in variable
+    set_fact:
+       vpc_id: "{{ avpc.vpcs[0].vpc_id }}"
+
+  - name: create a new ec2 key pair 'elb_keypair', returns generated private key
+    ec2_key:
+      name: elb_keypair
+      region: "{{ aws_region }}"
+      force: false
+    register: elb_key_result
+
+  - name: Save private elb key in a local safe space
+    copy: content="{{ elb_key_result.key.private_key }}" dest="./aws.elb.{{ domain_name }}.pem" mode=0400
+    when: elb_key_result.changed
+
+  - name: Find my public ip
+    uri:
+      url: http://ifconfig.me/ip
+      return_content: yes
+    register: ip_response
+
+
+  - name: Internet Gateway for new VPC
+    ec2_vpc_igw:
+       vpc_id: "{{ vpc_id }}"
+       tags:
+          Name: "{{ context }} Internet Gateway"
+          module: ansible ec2_vpc_igw
+          domain_name: "{{ domain_name }}"
+          context: "{{ context }}"
+          zone: "provider"
+       state: present
+    register: vpc_igw
+
+  - name: Set Internet Gateway ID in variable
+    set_fact:
+        igw_id: "{{ vpc_igw.gateway_id }}"
+
+  - name: Create Public subnet for App Servers in 1a
+    ec2_vpc_subnet:
+      vpc_id: "{{ vpc_id }}"
+      region: "{{ aws_region }}"
+      cidr: 10.0.0.0/27
+      az: "{{ aws_region }}a"
+      resource_tags:
+        Name: Provider Subnet 1A
+        zone: public
+        context: "{{ context }}"
+        threat: high
+      state: present
+    register: public_subnet_1a
+
+  - name: Create Public subnet for App Servers in 1c
+    ec2_vpc_subnet:
+      vpc_id: "{{ vpc_id }}"
+      region: "{{ aws_region }}"
+      cidr: 10.0.1.0/27
+      az: "{{ aws_region }}c"
+      resource_tags:
+        Name: Provider Subnet 1C
+        zone: public
+        context: "{{ context }}"
+        threat: high
+      state: present
+    register: public_subnet_1c
+
+  - name: Set up public subnet route table for Internet Traffic
+    ec2_vpc_route_table:
+      vpc_id: "{{ vpc_id }}"
+      region: "{{ aws_region }}"
+      purge_routes: true
+      purge_subnets: true
+      state: present
+      tags:
+        Name: "Public Route Table"
+        context: "{{ context }}"
+        zone: public
+        threat: high
+      subnets:
+        - "{{ public_subnet_1a.subnet.id }}"
+        - "{{ public_subnet_1c.subnet.id }}"
+      routes:
+        - dest: "0.0.0.0/0"
+          gateway_id: "{{ igw_id }}"
+
+
+#### ELB Port 80, Source 0.0.0.0, SSH 22 , source local IP
+  - name: ELB, WebServer Security Group
+    ec2_group:
+      name: "elb_sg"
+      description: elastic load balancer sg with rule descriptions
+      vpc_id: "{{ vpc_id }}"
+      region: "{{ aws_region }}"
+      rules:
+        - proto: tcp
+          ports:
+          - 80
+          cidr_ip: 0.0.0.0/0
+          rule_desc: allow all on port 80
+        - proto: tcp
+          from_port: 22
+          to_port: 22
+          cidr_ip: "{{ ip_response.content }}/32"
+          rule_desc: SSH via port 22 from trusted IP
+    register: elb_sg
+
+  - name: Launch ECS AMI EC2 instance in public subnet 1a
+    ec2:
+      group: elb_sg
+      instance_type: "{{ instance_type }}"
+      ##  Amazon Linux 2 AMI (HVM), SSD Volume Type eu-west-1
+      image: ami-07f2bbf97bdf932e6
+      vpc_subnet_id: "{{ public_subnet_1a.subnet.id }}"
+      assign_public_ip: yes
+      wait: true
+      region: "{{ aws_region }}"
+      keypair: "elb_keypair"
+      #count_tag:
+      #  type: vpc_endpoint
+      #exact_count: 1
+      # mkdir -p /run/pluto /var/run/pluto /var/run/xl2tpd\nrm -f /run/pluto/pluto.pid /var/run/pluto/pluto.pid /var/run/xl2tpd.pid\n/usr/local/sbin/ipsec start\nexec /usr/sbin/xl2tpd -D -c /etc/xl2tpd/xl2tpd.conf
+      user_data: "#!/usr/bin/env bash\nyum -y -q install httpd\necho '1a subnet web server' > /var/www/html/index.html\nservice httpd start"
+      instance_tags:
+        type: webserver
+        description: webserver
+    register: ec2_webserver_instance
+
+  - name: Launch ECS AMI EC2 instance in public subnet 1c
+    ec2:
+      group: elb_sg
+      instance_type: "{{ instance_type }}"
+      ##  Amazon Linux 2 AMI (HVM), SSD Volume Type eu-west-1
+      image: ami-07f2bbf97bdf932e6
+      vpc_subnet_id: "{{ public_subnet_1c.subnet.id }}"
+      assign_public_ip: yes
+      wait: true
+      region: "{{ aws_region }}"
+      keypair: "elb_keypair"
+      #count_tag:
+      #  type: vpc_endpoint
+      #exact_count: 1
+      # mkdir -p /run/pluto /var/run/pluto /var/run/xl2tpd\nrm -f /run/pluto/pluto.pid /var/run/pluto/pluto.pid /var/run/xl2tpd.pid\n/usr/local/sbin/ipsec start\nexec /usr/sbin/xl2tpd -D -c /etc/xl2tpd/xl2tpd.conf
+      user_data: "#!/usr/bin/env bash\nyum -y -q install httpd\necho '1c subnet web server' > /var/www/html/index.html\nservice httpd start"
+      instance_tags:
+        type: webserver
+        description: webserver
+    register: ec2_webserver_instance2
+
+  - name: Create target group
+    elb_target_group:
+      name: mytargetgroup
+      protocol: tcp
+      port: 80
+      health_check_path: /
+      successful_response_codes: "200,250-260"
+      vpc_id: "{{ vpc_id }}"
+      stickiness_enabled: False
+      stickiness_type: source_ip
+      targets:
+       - Id: "{{ ec2_webserver_instance2.instances[0].id }}"
+         Port: 80
+       - Id: "{{  ec2_webserver_instance.instances[0].id }}"
+         Port: 80
+      state: present
+      wait: no
+
+
+  - name: ELB for 2 instances
+    elb_network_lb:
+      name: myelb
+      state: present
+      region: "{{ aws_region }}"
+      subnets:
+        - "{{ public_subnet_1a.subnet.id }}"
+        - "{{ public_subnet_1c.subnet.id }}"
+      listeners:
+        - Protocol: TCP # Required. The protocol for connections from clients to the load balancer (TCP or TLS) (case-sensitive).
+          Port: 80 # Required. The port on which the load balancer is listening.
+          DefaultActions:
+            - Type: forward # Required. Only 'forward' is accepted at this time
+              TargetGroupName: mytargetgroup # Required. The name of the target group
+    register: elb
+
+  - name: elb.dev.neilpiper.me A record
+    route53:
+            state: present
+            zone: dev.neilpiper.me
+            record: elb.dev.neilpiper.me
+            type: A
+            ttl: 7200
+            value: "{{ elb.dns_name }}"
+            alias: True
+            alias_hosted_zone_id: Z2IFOLAFXWLO4F
