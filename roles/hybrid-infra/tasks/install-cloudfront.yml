@@ -1,0 +1,93 @@
+---
+# AWS tasks are run 'locally'
+
+# Authentication details should be passed in as arguments or exported in the shell before running this playbook
+# Ideally they should be stored in Hashicorp's 'Vault'
+# e.g.
+# export AWS_ACCESS_KEY_ID='my-access-key123'
+# export AWS_SECRET_ACCESS_KEY='sekrit23418'
+#
+# Run with `ansible-playbook -i testing infra.yml`
+
+# EXERCISE 7.1 of AWS Advanced Networking
+# Create a Cloudfront distribution
+
+## Create a VPC - non default
+- name: CREATE AWS ENVIRONMENT
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    instance_type: t2.nano
+    ec2_count: 1
+
+  # Gather facts about any VPC with a tag key Name and value Example
+  tasks:
+  - name: Create VPC
+    ec2_vpc_net:
+     name: vpc-{{ domain_name }}
+     cidr_block: 10.0.0.0/16
+     region: "{{ aws_region }}"
+     dns_support: true
+     dns_hostnames: true
+     tags:
+       module: ansible ec2_vpc_net
+       domain_name: "{{ domain_name }}"
+       context: "{{ context }}"
+     tenancy: default
+     state: present
+    register: avpc
+
+  - name: Set VPC ID in variable
+    set_fact:
+       vpc_id: "{{ avpc.vpc.id }}"
+
+
+  - name: Create a bucket with key as directory, in the region
+    aws_s3:
+      bucket: "{{ domain_name }}.cloudfrontbucket"
+      object: /images
+      mode: create
+      region: "{{ aws_region }}"
+
+  - name: Simple PUT operation - Images
+    s3_sync:
+      bucket: "{{ domain_name }}.cloudfrontbucket"
+      file_root: "{{ playbook_dir }}/../docs"
+      key_prefix: images
+      permission: public-read
+      include: "*.png"
+
+  - name: Simple PUT operation - HTML
+    s3_sync:
+      bucket: "{{ domain_name }}.cloudfrontbucket"
+      file_root: "{{ playbook_dir }}/website"
+      permission: public-read
+      include: "*.html"
+
+  - name: Make cloudfrontbucket a website
+    s3_website:
+      name: "{{ domain_name }}.cloudfrontbucket"
+      state: present
+      error_key: error.html
+
+# http://dev.neilpiper.me.cloudfrontbucket.s3-website-eu-west-1.amazonaws.com/
+
+  - name: Create Cloudfront Distribution
+    cloudfront_distribution:
+      state: present
+      default_origin_domain_name: dev.neilpiper.me.cloudfrontbucket.s3-website-eu-west-1.amazonaws.com
+      price_class: PriceClass_100
+      wait: yes
+      tags:
+        Name: example distribution
+        Project: example project
+        Priority: '1'
+    register: cloudfront_distro
+
+  - name: Add alias to Cloudfront distro
+    cloudfront_distribution:
+      state: present
+      distribution_id: "{{ cloudfront_distro.id }}"
+      comment: modified by cloudfront.py again
+      aliases: [ 'aws-advancednetworking.neilpiper.me' ]

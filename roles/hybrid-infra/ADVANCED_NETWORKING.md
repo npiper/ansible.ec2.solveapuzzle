@@ -801,3 +801,360 @@ You define health check settings for your load balancer on a per-target group ba
 ### References
 
 https://d1.awsstatic.com/whitepapers/hybrid-cloud-dns-options-for-vpc.pdf
+
+## Chapter 7 Cloud Front
+
+A cloudfront created of 3 things:
+
+ * Distribution (DNS ID)
+ * Origin(s)
+ * Cache Control (Default 24 hours)
+
+An origin server stores the original, definitive version of your objects.
+
+To serve files from Amazon CloudFront, you simply use the distribution domain name in place of your website’s domain name; the rest of the file paths stay unchanged
+
+Amazon CloudFront does not require Amazon S3 buckets to be public, and it is a good idea to keep them private
+
+Amazon CloudFront has a global network of 100 edge locations in 50 cities across 23 countries. These edge locations include 89 Points of Presence and 11 Regional Edge Caches.
+
+You can also configure Amazon CloudFront to require users to use HTTPS to access your content, forward cookies and/or query strings to your origin, prevent users from particular countries from accessing your content, and create access logs
+
+Static, Dynamic Content (CSS, Javascript), Multimedia content, HTTP Live streaming (Except Adobe flash which can go over RTMP Distribution)
+
+Connection parameters:
+
+ * S3 bucket DNS URL
+ * Website DNS URL
+ * Load balancer DNS URL
+ * EC2 Instance DNS URL
+
+best practice to use a version identifier as part of the object (file) path name instead of manually invalidation where the object is changing form / state.  (e.g. references to Javascript, css code)
+
+A `cache behavior` lets you configure a variety of Amazon CloudFront functionalities for a given URL path pattern for files on your website
+
+ *  The path pattern
+ *  Which origin to forward your requests to
+ *  Whether to forward query strings to your origin
+ *  Whether accessing the specified files requires signed URLs
+ *  Whether to require HTTPS access
+ *  Amount of time file stays in cache
+
+### Certificate Manager - Region specific CloudFront usage
+
+To use an ACM Certificate with Amazon CloudFront, you must request or import the certificate in the US East (N. Virginia) Region.
+
+Certificates in AWS Certificate Manager are regional resources. When you want to use the same FQDN in multiple regions, you’ll need to request or import a certificate in each region. For Amazon CloudFront, you perform these tasks in the US East (N. Virginia) Region.
+
+### Private Content
+
+Signed URL's - Use URLs that are valid only between certain times and optionally from certain IP addresses.
+Signed cookies - Require authentication via public and private key pairs
+Origin Access Identities (OAI) - Restrict access to an Amazon S3 bucket only to a special Amazon CloudFront user associated with your distribution
+
+### Cloudfront and Lambda@Edge
+
+Lambda@Edge processes requests at edge locations instead of an origin server, which can significantly reduce latency and improve the user experience
+
+Lambda@Edge functions execute in response to Amazon CloudFront events in the region or edge location that is closest to your customer.
+
+You can execute AWS Lambda functions when the following Amazon CloudFront events occur:
+
+ * CloudFront receives a request from a viewer (viewer request)
+ * Before Amazon CloudFront forwards a request to the origin (origin request)
+ * CloudFront receives a response from the origin (origin response)
+ *  Before Amazon CloudFront returns the response to the viewer (viewer response)
+
+### Amazon Cloud front field level Encryption
+
+Amazon CloudFront Field-Level Encryption, you can encrypt sensitive pieces of content at the edge before requests are forwarded to your origin servers. The data is encrypted using a public key that you supply - isolating sensitive data when it first enters the application, and only decrypted it at one or a few key points in its lifecycle, can significantly improve application security while enabling greater agility in secure application development.
+
+You can specify up to 10 fields in an HTTP POST request that are to be encrypted, and you can set it so that different profiles are applied to each request based on a query string within the request URL
+
+
+## Chapter 8 - Network Security
+
+Services detect anomalies in your environment - detect and respond to Network security events.
+
+Data flow
+ * Cloudfront
+ * AWS Shield
+ * AWS WAF
+
+Security Services
+ * Guard Duty
+ * Macie
+ * Inspector
+
+
+### AWS Organisations
+
+Centralised management of multiple AWS Accounts via a `Service Control Policy` -restrict, at the account level, what services and actions member-account users, groups, and roles can take, including the account root user (Like IAM)
+
+### AWS CloudFormation
+
+AWS CloudFormation `StackSets` extends the functionality of stacks by enabling you to create, update, or delete stacks across multiple accounts and regions with a single operation
+
+When the cross-account, administrative role is assumed, your automation tooling can call AWS CloudFormation to create these resources in the new account.
+
+### AWS Service Catalog
+
+Allows organizations to create and manage a curated portfolio of products.
+
+`products` might be specific software, servers, or complete multi-tier architectures
+
+AWS Service Catalog uses a combination of IAM roles, termed launch constraints, and AWS CloudFormation templates to deliver fine-grained control of access and configuration during the provisioning process - e.g. bundle a new AWS CloudFormation template and launch constraints as a product available to the departments in an AWS Service Catalog to create a fully established account VPC.
+
+### Data flow security
+
+#### Edge Locations (Denial of Service)
+
+detecting, preventing, and mitigating the impact of Distributed Denial of Service (DDoS) attacks on your environment
+
+edge locations all include built-in network layer (Layer 3) and transport layer (Layer 4) network mitigations. The infrastructure is continuously analyzing traffic for anomalies, and it provides built-in defense against common DDoS attacks such as SYN floods, User Datagram Protocol (UDP) floods, and reflection attacks
+
+the global scale of the edge infrastructure allows AWS to absorb attacks by diffusing the incoming traffic flows across multiple edge locations
+
+#### Amazon Route 53
+
+DNS is a critical network service. Disruption of DNS service can render your environment inaccessible and inoperable.
+
+Route 53 uses shuffle sharding and anycast striping to deliver continuous availability in the face of DDoS attacks and other events that impact availability
+
+`Anycast striping` the lookup process for the DNS servers themselves are also dispersed across multiple TLDs (Top level domains)
+
+Packet filters can be applied that drop invalid DNS requests. If you wish to block requests further, Amazon Route 53 provides geolocation routing policies that give you control over the responses provided to DNS resolvers based on their source IP addresses
+
+#### Cloudfront
+
+mitigate the impact of DDoS attacks, Amazon CloudFront is frequently used to front both static and dynamic content
+
+if you use Amazon CloudFront to protect your infrastructure, it has little value if a malicious actor can simply bypass Amazon CloudFront and attack your origin directly
+
+2 Commons Approaches:
+
+1) using an Origin Access Identity (OAI) with Amazon Simple Storage Service (Amazon S3)
+2) using custom headers
+
+By requiring that access to Amazon S3 occur through Amazon CloudFront using the OAI, you preclude the bypassing of network security controls that you implement in Amazon CloudFront
+
+Amazon CloudFront allows you to manipulate many of the headers that are passed to your origin. By configuring a custom header, you can restrict access to only those Amazon CloudFront distributions that you designate - e.g. limit access to only the known Amazon CloudFront IP addresses
+
+Amazon CloudFront allows you to require signed URLs or signed cookies for access to restricted content
+
+When using signed URLs or signed cookies, you specify the date and time at which the content is no longer available to the consumer. You can optionally specify a starting date and time as well as a restricted set of consumer source IPs
+
+new Amazon CloudFront capability called `Field-Level Encryption` to further enhance the security of sensitive data, like credit card numbers or personally identifiable information (PII) - ensures that sensitive data can only be decrypted and viewed by certain components or services in your origin application stack
+
+#### AWS WAF (Web Application Firewall)
+
+Allows you to protect specific AWS resources from common web exploits that could affect the confidentiality, integrity, and availability of your network and your data. AWS WAF integrates with Amazon CloudFront and the Application Load Balancer to monitor HTTP and HTTPS requests
+
+Web Access Control Lists (ACLs) to control your HTTP and HTTPS traffic. Web ACLs are composed of rules, and rules are composed of condition
+
+Conditions are the basic building blocks for AWS WAF. Six condition types are supported
+
+ * XSS
+ * IP addresses
+ * Size Constraints
+ * SQL Injection
+ * Geographic Match
+ * String Match
+
+Once the conditions are defined, you compose rules with the conditions. Each rule contains a name, an Amazon CloudWatch metric name, a rule type, and a condition list.
+
+When you add multiple conditions to a rule, all conditions must match
+
+The rule type can be either regular rule or rate-based rule
+
+Multiple resources can use the same web ACL. Each web ACL has a name and an Amazon CloudWatch metrics name, similar to the rules definition
+
+You can use AWS WAF in a static configuration, a dynamic configuration, or as an integrated component with a third-party offering
+
+#### AWS Shield
+
+AWS Shield provides protection against DDoS attacks
+
+AWS Shield Standard contains a continuously evolving rule base that is updated by AWS in response to changes in the Internet threat landscape. Customer visibility into the details of attacks is limited, however
+
+DDOS can now become -
+Economic Denial of Sustainability (EDoS) attacks. The notion of EDoS is that, while a DDoS attack may not impact your availability, the financial cost of absorbing an attack itself becomes untenable. With AWS Shield Advanced, AWS offers some cost protection against billing spikes caused by a DDoS attack
+
+When using AWS Shield Advanced, you mitigate application layer (Layer 7) attacks either with your own custom mitigations or through engagement of the DRT
+
+
+### Region based services
+
+#### Elastic Load Balancing
+
+Elastic Load Balancing will automatically scale to meet the demands of the vast majority of use cases
+
+Elastic Load Balancing only accepts incoming traffic on its listeners, minimizing the attack surface,  proxies connections to your VPC resources, so common attacks like SYN floods are not seen by your back-end resources because only well-formed TCP connections result in data flow to your resources
+
+Internet-facing load balancers have public IP addresses, resources in your VPC are not required to use publicly-routable IP addresses
+
+Elastic Load Balancing has options for connections over Secure Sockets Layer (SSL)/TLS with Classic Load Balancers and HTTPS both for Classic Load Balancer and Application Load Balancer.  Security policies allow you to select from a suite of ciphers for various SSL/TLS protocol versions.
+
+`Elastic Load Balancing sandwich`, leverages two tiers of load balancers to provide inline data flow analysis
+
+ * Internet Facing ELB's
+ * LB's to EC2 Instances - (WAF, Data flow)
+ * Internal LB's --> Workload
+
+Can use a similar approach to provide inline data flow analysis for traffic leaving your VPC
+
+
+#### Subnets, Route tables
+
+Subnet is a network segment within the Classless Inter-Domain Routing (CIDR) range of your VPC contained within a single Availability Zone
+
+Route tables are particularly important when you want to keep traffic within the AWS infrastructure, with VPC endpoints for Amazon S3 and Amazon DynamoDB, you define policies that determine the degree of access granted through the endpoint.  AWS-provided gateways, endpoints, and peering are highly available
+
+#### Security Groups, NACL's
+
+Security groups are stateful network layer (Layer 3)/transport layer (Layer 4) firewalls that you apply to network interfaces in your VPC
+
+Network ACLs are stateless network layer (Layer 3)/transport layer (Layer 4) filters that you apply to subnets within your VPC
+
+### Shared Responsibility Model
+
+network traffic protection, network configuration, and firewall configuration are all customer responsibilities
+
+Using integrated operating system capabilities or offerings from the AWS Marketplace, it is possible to capture packet data from each Amazon EC2 instance and stream the data to a collector.
+
+### Security Services
+
+#### Guard Duty
+
+GuardDuty immediately begins analyzing billions of events from AWS CloudTrail, VPC Flow Logs, and DNS Logs
+
+GuardDuty uses threat intelligence feeds, such as lists of malicious IPs and domains, and machine learning to detect threats more accurately.
+
+#### Inspector
+
+Amazon Inspector is a security service that allows you to analyze your VPC environment to identify potential security issues
+
+create assessment targets using Amazon EC2 instance tags, create an assessment template with a selected rules package, and then run the assessment.
+
+Amazon Inspector offers a straightforward approach to understanding the posture of your Amazon EC2 instances
+
+#### Macie
+
+uses machine learning to discover, classify, and protect sensitive data in AWS automatically
+
+recognizes sensitive data such as Personally Identifiable Information (PII) or intellectual property and provides you with dashboards and alerts that give visibility into how this data is being accessed or moved
+
+Amazon Macie starts by identifying and protecting the data that malicious actors are likely to target.
+
+Amazon Macie can alert you when AWS API credentials or SSH keys appear in your Amazon S3 buckets.
+
+### Detection and Response
+
+#### SSH Intrusion Attempts
+
+ * Amazon Cloud Watch - collect and track metrics, logs, and events (Log Agents on EC2, Log groups SSH + Metric Filter)
+ * AWS Cloud Trail - history of AWS API calls and related events in your account
+ * IAM  - Control access to AWS resources (Roles)
+ * Lambda - code without provisioning or managing servers
+ * SNS - Coordinates and manages the delivery messages to subscribing endpoints
+
+Specify an Amazon CloudWatch alarm to indicate when the allowed number of failed login attempts per unit time (for example, two failed attempts every five minutes) is exceeded to an SNS Topic where an AWS Lambda function is then run - updates the VPC network ACLs to deny incoming requests from the source.
+
+#### Network Traffic Analysis
+
+Amazon Cloud Watch Logs
+Lambda Ingester function
+Kinesis Firehose + Lambda Decorator Function (Network, IP Info)
+Error Logs to an S3 Bucket
+Firehose to ElasticSearch
+Kibana for network analysis
+
+Amazon CloudWatch Events also has the capability to generate scheduled events
+
+The AWS Lambda function uses an IAM role that allows it to call the AWS WAF APIs directly, updating the IP addresses condition used for blocking IPs.
+
+# Chapter 9 - Network Performance
+
+## Terminology
+
+Bandwidth - Maxiumum bit transfer rate (Gigabit per secone)
+Latency - Delay between 2 points in network
+Throughput - Bandwidth actually achieved counting for latency, loss etc;
+Jitter - variance in inter packet delays
+Packet loss - percentage of packets that are dropped in a flow or on a circuit
+Packets per second - No. of packets processed in one second
+Maxiumum Transmission Unit - Max 1500 bytes, AWS supports 9001 Byte jumbo frames within VPC, VPC Peering + traffic exiting VPC support 1500 byte packets
+
+For applications that require high throughput, such as bulk data transfer, increasing the MTU can increase throughput.
+
+To assist with allowing other instances to discover the MTU limit, you should allow Destination Unreachable in a custom Internet Control Message Protocol (ICMP) rule in your security groups
+
+## Instance Networking
+
+Compute-Optimized (C family) and General-Purpose (M family) instances are common choices for network-bound applications
+
+enhanced networking option, Amazon EBS-optimized networking = Network performance improves as you move up the instance family resources.
+
+### Placement Groups
+
+Single Availability Zone (e.g. eu-west-1a)
+
+recommended for applications that benefit from low network latency, high network throughput, or both
+
+Otherwise maximum (Internet Gateway) -flows outside a placement group are limited to 5 Gbps
+
+recommend launching all of the instances that you will need into a placement group at the time you provision them - changing later risks an `insufficent capacity error`
+
+### EBS Optimised instances
+
+Amazon EBS input and output affect network performance because the storage is network-attached
+
+dedicated throughput minimizes contention between Amazon EBS Input/Output (I/O) and other traffic from your Amazon EC2 instance - options between 500 and 4,000 Mbps depending on the instance type
+
+### Nat Gateway vs. NAT Instances
+
+A NAT gateway is horizontally scalable within an Availability Zone and can forward up to 10 Gbps of Traffic
+
+### EC2 - Enhanced Networking
+
+Enhanced networking is a fundamental component to increasing networking performance on AWS. We recommend enabling enhanced networking for all instances that support it
+
+Enhanced networking requires both operating system driver support and for the Amazon Machine Image (AMI) or instance to be flagged for Enhanced networking
+
+enhanced networking can be enabled with one of two drivers: the `Intel 82599 Virtual Function interface` and the `Amazon Elastic Network Adapter (ENA)` driver
+
+O/S - Enhanced networking is not available on Windows Server 2008 or Windows Server 2003.
+
+The Intel Data Plane Development Kit (DPDK) is a set of libraries and drivers for fast packet processing ( Useful for custom packets). DPDK reduces the overhead of packet processing inside the operating system, which provides applications with more control of network resources such as ring buffers, memory, and poll-mode drivers
+
+To get the highest performance of data transfer to Amazon EC2 or Amazon S3, we suggest splitting the data transfer and processing across many instances. Instances that are ENA enabled can achieve higher bandwidth to S3 by using multiple flows, up to 25 Gbps
+
+### Load Balancer Performance
+
+Network Load Balancer advantages are performance and scale. Since it is less computationally complex to forward packets without looking inside them, the Network Load Balancer scales faster and has lower latency
+
+### VPN Performance
+
+VPN endpoints are capable of approximately 1.25 Gbps per tunnel depending on packet size
+increase bandwidth into AWS, you can forward traffic to both endpoints
+
+### Direct Connect Performance
+
+More predictable performance than over internet - physical cable based
+Direct Connect allows for customers to provision multiple 10 Gbps connections and also aggregate those connections into a single 40 Gbps circuit.
+
+For large transfers, AWS Direct Connect can provide a dedicated circuit with less latency and more predictable throughput
+
+Consider using services like AWS Snowball, AWS Snowmobile, or AWS Storage Gateway for transferring datasets larger than 1 TB
+
+### Network Appliances
+
+Routers, VPN appliances, NAT instances, firewalls, intrusion detection and prevention systems, web proxies, email proxies, and other network services have historically been hardware-based solutions in the network
+
+### Performance Testing
+
+https://aws.amazon.com/premiumsupport/knowledge-center/ network-throughput-benchmark-linux-ec2/
+
+https://aws.amazon.com/premiumsupport/knowledge-center/network-issue-vpc-onprem-ig/
+
+https://cloudshark.io/articles/aws-vpc-traffic-mirroring-cloud-packet-capture/
