@@ -1,0 +1,131 @@
+---
+# AWS tasks are run 'locally'
+
+# Authentication details should be passed in as arguments or exported in the shell before running this playbook
+# Ideally they should be stored in Hashicorp's 'Vault'
+# e.g.
+# export AWS_ACCESS_KEY_ID='my-access-key123'
+# export AWS_SECRET_ACCESS_KEY='sekrit23418'
+#
+# Run with `ansible-playbook -i testing infra.yml`
+
+## Create a VPC - non default
+- name: CREATE AWS ENVIRONMENT
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    instance_type: t2.micro
+    ec2_count: 1
+
+  tasks:
+    - name: Create VPC
+      ec2_vpc_net:
+       name: vpc-{{ domain_name }}
+       cidr_block: 10.0.0.0/16
+       region: "{{ aws_region }}"
+       dns_support: true
+       dns_hostnames: true
+       tags:
+         module: ansible ec2_vpc_net
+         domain_name: "{{ domain_name }}"
+         context: "{{ context }}"
+       tenancy: default
+       state: present
+      register: avpc
+      # Workaround while ec2_vpc_net has no such functionality
+
+    - name: Ensure VPC has Amazon provided /56
+      command: aws ec2 associate-vpc-cidr-block
+        --amazon-provided-ipv6-cidr-block --vpc-id "{{ avpc.vpc.id }}"
+      when: avpc.vpc.ipv6_cidr_block_association_set is not defined
+
+      # We now use the set_fact module
+# to save the id of the VPC in a new variable.
+
+    - name: Set VPC ID in variable
+      set_fact:
+          vpc_id: "{{ avpc.vpc.id }}"
+
+## PUBLIC - ZONING ##
+
+# Every VPC needs at least one Internet Gateway.
+# This component allows traffic between the VPC and the outside world.
+
+    - name:  Create Internet Gateway for VPC
+      ec2_vpc_igw:
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ aws_region }}"
+        tags:
+         Name: "{{ context }} Internet Gateway"
+         module: ansible ec2_vpc_igw
+         domain_name: "{{ domain_name }}"
+         context: "{{ context }}"
+        state:  "present"
+      register: vpc_igw
+
+    - name: Set Internet Gateway ID in variable
+      set_fact:
+           igw_id: "{{ vpc_igw.gateway_id }}"
+
+## Public Facing Subnet
+
+    - name: Create Public subnet for App Servers in 1a
+      ec2_vpc_subnet:
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ aws_region }}"
+        cidr: 10.0.0.0/28
+        az: "{{ aws_region }}a"
+        resource_tags:
+          Name: App Subnet 1A
+          zone: public
+          context: "{{ context }}"
+          threat: high
+        state: present
+      register: public_subnet_1a
+
+    - name: Set Public Subnet ID in variable
+      set_fact:
+        public_subnet1a_id: "{{ public_subnet_1a.subnet.id }}"
+
+## Public Facing Subnet - 1c
+
+    - name: Create Public subnet for App Servers in 1c
+      ec2_vpc_subnet:
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ aws_region }}"
+        cidr: 10.0.1.0/28
+        az: "{{ aws_region }}c"
+        map_public: yes
+        resource_tags:
+          Name: App Subnet 1C
+          zone: public
+          context: "{{ context }}"
+          threat: high
+        state: present
+      register: public_subnet_1c
+
+    - name: Set Public Subnet 1c ID in variable
+      set_fact:
+        public_subnet1c_id: "{{ public_subnet_1c.subnet.id }}"
+
+
+
+    - name: Set up public subnet route table for Internet Traffic
+      ec2_vpc_route_table:
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ aws_region }}"
+        purge_routes: true
+        purge_subnets: true
+        state: present
+        tags:
+          Name: "Public Route Table"
+          context: "{{ context }}"
+          zone: public
+          threat: high
+        subnets:
+          - "{{ public_subnet1a_id }}"
+          - "{{ public_subnet1c_id }}"
+        routes:
+          - dest: "0.0.0.0/0"
+            gateway_id: "{{ igw_id }}"

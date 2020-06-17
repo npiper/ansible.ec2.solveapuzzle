@@ -1,0 +1,31 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Test VPC
+Parameters:
+  AZ:
+    Type: String
+  VPCCIDRRange:
+    Type: String
+  SubnetCIDRRange:
+    Type: String
+Resources:
+  MyVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock:
+        Ref: VPCCIDRRange
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: MyVPC
+        - Key: Environment
+          Value: Testing
+
+  VPCSubnet1a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: MyVPC
+      CidrBlock:
+        Ref: SubnetCIDRRange
+      AvailabilityZone:
+        Ref: AZ

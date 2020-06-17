@@ -1,0 +1,13 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: VPC in Dublin
+Resources:
+  MyVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: "10.17.0.0/16"
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: MyVPC
+        - Key: Environment
+          Value: Testing

@@ -17,9 +17,8 @@
   vars:
     instance_type: t2.nano
     ec2_count: 1
-    pwd_alias: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
-
-
+    #pwd_alias: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
+    pwd_alias: "6VZyhMdvsuQR3CNyj8dZ70WEPFedlTKq"
 # This playbook sets up an Amazon VPN environment
   tasks:
   - name: create a new ec2 key pair 'vpn_keypair', returns generated private key
@@ -49,6 +48,30 @@
   - name: Set VPC ID in variable
     set_fact:
        vpc_id: "{{ avpc.vpcs[0].vpc_id }}"
+
+  - name: Pre-check if Flow logs exist?
+    local_action: shell aws ec2 describe-flow-logs --filter "Name=log-group-name,Values=vpc-{{ domain_name }}"
+    register: flow_logs_list
+
+  - name: Create Cloudwatch log group
+    cloudwatchlogs_log_group:
+      state: present
+      log_group_name: "vpc-{{ domain_name }}"
+      tags: { "domain": "{{ domain_name }}", "scope" : "VPC" }
+    when: not flow_logs_list.stdout | regex_search('CreationTime')
+    register: clw_group
+
+  - name: Find Role info for AWSServiceRoleForVPCS2SVPN
+    iam_role_info:
+      name: AWSServiceRoleForVPCS2SVPN
+    register: iam_role
+
+
+
+
+  - name: enable vpc flow logs write as Role AWSServiceRoleForVPCS2SVPN
+    local_action: shell aws ec2 create-flow-logs --resource-type VPC --traffic-type ALL --resource-ids {{ vpc_id }} --traffic-type ALL --log-group-name vpc-{{ domain_name }} --deliver-logs-permission-arn {{ iam_role.iam_roles[0].arn }}
+    when: not flow_logs_list.stdout | regex_search('CreationTime')
 
   - name: Find my public ip
     uri:
@@ -154,7 +177,7 @@
 
   - name: Create customer gateway using IP - Account level
     ec2_customer_gateway:
-      ip_address: "{{ ip_response }}"
+      ip_address: "{{ ip_response.content }}"
       name: NeilHome
       routing: static
       bgp_asn: 65000
@@ -170,13 +193,14 @@
       customer_gateway_id: "{{ customer_gw.gateway.customer_gateways[0].customer_gateway_id }}"
       static_only: yes
       tunnel_options:
-        -
-          PreSharedKey: "{{ pwd_alias }}"
-        -
-          PreSharedKey: "{{ pwd_alias }}"
+       -
+        PreSharedKey: "{{ pwd_alias }}"
+       -
+        PreSharedKey: "{{ pwd_alias }}"
       routes:
         - 92.238.125.122/32
         - 192.168.0.0/24
+    register: vpn_conn
 
   # Configure our Local VPN Server - IPSec
   # options.tunnel_options[X].outside_ip_address
@@ -185,5 +209,21 @@
 
   # Search replace Outside IP Address, VPC CIDR and Pre-Shared key in conf, secrets filters
 
-  # Run a docker container philplckthun/strongswan configured with AWS connections
+  - name: Write an ENV file for the VPN Gateway
+    copy: content="VPN_IPSEC_PSK={{ pwd_alias }}\nVPN_USER=vpnuser\nVPN_PASSWORD=vpnpass\nAWS_TUNNEL1_IP={{ vpn_conn.options.tunnel_options[0].outside_ip_address }}\nAWS_TUNNEL2_IP={{ vpn_conn.options.tunnel_options[1].outside_ip_address }}\nAWS_CIDR={{ avpc.vpcs[0].cidr_block }}\nLOCAL_CIDR=192.168.0.0/24" dest=./vpn.env
+
+  # Run a docker container npiper/docker-ipsec-vpn-server configured with AWS connections
   # docker run -d -p 500:500/udp -p 4500:4500/udp -p 1701:1701/udp -e VPN_USER=vpnuser -e VPN_PASSWORD=vpnpass --privileged -v`pwd`/config:/etc/ipsec.d philplckthun/strongswan
+  #- name: Start a container and use an env file
+  #  docker_container:
+  #    name: docker-ipsec-vpn-server
+  #    image: npiper/docker-ipsec-vpn-server
+  #    env_file: ./vpn.env
+  #    state: started
+  #    exposed_ports:
+  #      - 500
+  #      - 4500
+  #      - 1701
+  #    restart: yes
+  #    privileged: yes
+  #    detach: yes

@@ -20,6 +20,7 @@
   vars:
     # t3 has enhanced networking
     instance_type: t3.nano
+    placement_instance_type: m4.large
     ec2_count: 1
     ec2_image: ami-07f2bbf97bdf932e6
     server_script: "{{lookup('file', 'network-server.sh')}}"
@@ -120,6 +121,10 @@
           from_port: 5201
           to_port: 5201
           cidr_ip: "0.0.0.0/0"
+        - proto: icmp
+          from_port: 8 # icmp type, -1 = any type
+          to_port:  -1 # icmp subtype, -1 = any subtype
+          cidr_ip: 10.0.0.0/16
     register: security_groups
 
   - name: Create EC2 instances in each Subnet
@@ -145,3 +150,35 @@
 
 ## What it can do - run a speed test on a Client to the Server
 ## SSH to client - run `./iperf3 -t 10 -c <private IP of Server>`
+
+  - name: Create Placement Group for test
+    ec2_placement_group:
+      name: fast-cluster
+      state: present
+      region: "{{ aws_region }}"
+      strategy: cluster
+    register: place_group
+
+
+  - name: Create EC2 instances in each Subnet
+    ec2:
+      key_name: network_keypair
+      instance_type: "{{ placement_instance_type }}"
+      image: "{{ ec2_image }}"
+      region: "{{ aws_region }}"
+      group: network-SG
+      placement_group: fast-cluster
+      wait: yes
+      count: 1
+      vpc_subnet_id: "{{ subnets.results[0].subnet.id }}"
+      assign_public_ip: yes
+      user_data: "{{ item.script }}"
+      instance_tags:
+        type: vpn
+        location: placement_group
+        description: eu-west-1 Amazon ECS-optimized Amazon Linux 2
+        role: "{{ item.role }}"
+    loop:
+      - {subnet: "{{ subnets.results[0].subnet.id }}", role: "client", script: "{{ client_script }}"}
+      - {subnet: "{{ subnets.results[1].subnet.id }}", role: "client", script: "{{ client_script }}" }
+      - {subnet: "{{ subnets.results[2].subnet.id }}", role: "server", script: "{{ server_script }}" }
