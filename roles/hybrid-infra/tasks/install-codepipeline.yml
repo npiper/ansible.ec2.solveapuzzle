@@ -1,0 +1,51 @@
+---
+# AWS tasks are run 'locally'
+
+# Authentication details should be passed in as arguments or exported in the shell before running this playbook
+# Ideally they should be stored in Hashicorp's 'Vault'
+# e.g.
+# export AWS_ACCESS_KEY_ID='my-access-key123'
+# export AWS_SECRET_ACCESS_KEY='sekrit23418'
+#
+# Run with `ansible-playbook -i testing infra.yml`
+
+# EXERCISE 10.6 of AWS Advanced Networking
+# Create a Pipeline that does a Cloudfront deploy
+
+## Create a VPC - non default
+- name: CREATE AWS ENVIRONMENT
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    instance_type: t2.nano
+    ec2_count: 1
+
+
+  tasks:
+  - name: Create EC2 Role for CloudFormation execution
+    iam_role:
+        name: CloudFormation-NetAuto
+        state: present
+        assume_role_policy_document: "{{ lookup('file','cloudformation/cloudformation_assume_role.json') }}"
+        managed_policy:
+          - arn:aws:iam::aws:policy/PowerUserAccess
+    register: ec2role_cf
+
+  - name: Create EC2 Role for CodePipeline execution
+    iam_role:
+        name: CodePipeline-NetAuto
+        state: present
+        assume_role_policy_document: "{{ lookup('file','cloudformation/codedeploy_assume_role.json') }}"
+        managed_policy:
+          - arn:aws:iam::aws:policy/PowerUserAccess
+    register: ec2role_cp
+
+
+   - name: Create a CodePipeline
+     aws_codepipeline:
+       name: NetAuto
+       role_arn: "{{ ec2role_cp.arn }}"
+       artifact_store:
+         type: S3
+         location: my_s3_codepipline_bucket
